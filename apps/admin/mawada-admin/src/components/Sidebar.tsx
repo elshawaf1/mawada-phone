@@ -30,6 +30,32 @@ const navItems = [
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const [location] = useLocation();
   const [mounted, setMounted] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!open) return;
+    const touch = e.touches[0];
+    (e.currentTarget as HTMLElement).dataset.touchStartX = String(touch.clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!open) return;
+    const touch = e.touches[0];
+    const startX = Number((e.currentTarget as HTMLElement).dataset.touchStartX || touch.clientX);
+    const diff = touch.clientX - startX;
+    // In RTL, swiping left (negative diff) means dragging sidebar to close
+    if (diff < 0) {
+      setSwipeOffset(Math.max(diff, -150));
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!open) return;
+    if (swipeOffset < -50) {
+      onClose();
+    }
+    setSwipeOffset(0);
+  };
 
   useEffect(() => {
     if (open) {
@@ -72,7 +98,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             ? "translate-x-0 opacity-100 scale-100"
             : "translate-x-full opacity-0 scale-95 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:scale-100 lg:pointer-events-auto lg:w-0 lg:overflow-hidden"
         )}
-        style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
+        style={{
+          transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+          transform: swipeOffset ? `translateX(calc(var(--tw-translate-x, 0px) + ${swipeOffset}px))` : undefined,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Logo */}
         <div className="relative p-5 pb-4">
@@ -93,7 +125,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             <button
               onClick={onClose}
               className={cn(
-                "lg:hidden p-1.5 rounded-lg transition-all duration-300",
+                "lg:hidden p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-all duration-300",
                 "text-white/30 hover:text-white hover:bg-white/[0.08]",
                 "hover:rotate-90 active:scale-90"
               )}
@@ -133,7 +165,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               <Link key={href} href={href}>
                 <a
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden",
+                    "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden min-h-[44px]",
                     isActive
                       ? "text-white"
                       : "text-white/35 hover:text-white/70"

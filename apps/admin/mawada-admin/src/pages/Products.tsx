@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye, Star } from "lucide-react";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { SkeletonKPI, SkeletonTable } from "@/components/ui/skeleton";
@@ -389,70 +390,200 @@ export default function Products() {
       </div>
 
       {/* Product Table */}
-      <Card borderless className="shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">قائمة المنتجات</CardTitle>
-            <Badge variant="secondary" className="rounded-full text-xs font-number px-3">
-              {filtered.length} منتج
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-border/40 hover:bg-transparent">
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المنتج</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">التصنيف</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">السعر</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المخزون</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الحالة</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9 w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
-                    <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">لا توجد منتجات مطابقة</p>
-                  </TableCell>
-                </TableRow>
-              ) : filtered.map((product) => {
-                const primaryImage = product.product_images?.find(img => img.isPrimary);
-                return (
-                  <TableRow key={product.id} className={cn("hover:bg-muted/20 transition-colors border-b border-border/20", !product.isActive && "opacity-55")}>
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-3 max-w-[280px]">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden ring-1 ring-black/5 shrink-0 bg-muted">
-                          {primaryImage?.url ? (
-                            <img src={primaryImage.url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ImagePlus className="w-4 h-4 text-muted-foreground/40" />
+      <ResponsiveTable
+        desktop={
+          <Card borderless className="shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">قائمة المنتجات</CardTitle>
+                <Badge variant="secondary" className="rounded-full text-xs font-number px-3">
+                  {filtered.length} منتج
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-border/40 hover:bg-transparent">
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المنتج</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">التصنيف</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">السعر</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المخزون</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الحالة</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9 w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
+                        <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">لا توجد منتجات مطابقة</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : filtered.map((product) => {
+                    const primaryImage = product.product_images?.find(img => img.isPrimary);
+                    return (
+                      <TableRow key={product.id} className={cn("hover:bg-muted/20 transition-colors border-b border-border/20", !product.isActive && "opacity-55")}>
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-3 max-w-[280px]">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden ring-1 ring-black/5 shrink-0 bg-muted">
+                              {primaryImage?.url ? (
+                                <img src={primaryImage.url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <ImagePlus className="w-4 h-4 text-muted-foreground/40" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div className="min-w-0">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-medium truncate">{product.nameAr}</p>
+                                {product.isFeatured && (
+                                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 rounded-full h-4 font-number bg-amber-50 text-amber-700 border-amber-200">مميز</Badge>
+                                )}
+                              </div>
+                              {product.name && <p className="text-xs text-muted-foreground truncate">{product.name}</p>}
+                              {product.sku && <p className="text-[10px] text-muted-foreground/50 font-mono font-number">{product.sku}</p>}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge variant="outline" className="text-[11px] font-normal rounded-full px-2.5 py-0.5">
+                            {catName(product.categories) || "-"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3">
                           <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-medium truncate">{product.nameAr}</p>
-                            {product.isFeatured && (
-                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 rounded-full h-4 font-number bg-amber-50 text-amber-700 border-amber-200">مميز</Badge>
+                            <span className={cn("font-number font-semibold text-sm", product.isOnSale ? "text-red-500 line-through" : "")}>
+                              {product.basePrice.toLocaleString("ar-EG")}
+                            </span>
+                            {product.isOnSale && product.salePrice && (
+                              <span className="font-number font-bold text-sm text-emerald-600">
+                                {product.salePrice.toLocaleString("ar-EG")}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground/60">ج</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "font-number text-sm font-medium min-w-[24px]",
+                              product.totalStock === 0 ? "text-red-500" : product.totalStock <= 5 ? "text-amber-600" : "text-emerald-600"
+                            )}>
+                              {product.totalStock}
+                            </span>
+                            <div className="w-14 h-1.5 bg-muted/60 rounded-full overflow-hidden">
+                              <div className={cn(
+                                "h-full rounded-full",
+                                product.totalStock === 0 ? "bg-red-500" : product.totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500"
+                              )} style={{ width: `${Math.min(100, product.totalStock)}%` }} />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => toggleActive(product)}
+                              className={cn(
+                                "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border",
+                                product.isActive
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                              )}
+                            >
+                              {product.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                              {product.isActive ? "نشط" : "غير نشط"}
+                            </button>
+                            {product.isOnSale && (
+                              <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0 rounded-full font-medium">
+                                عرض
+                              </Badge>
                             )}
                           </div>
-                          {product.name && <p className="text-xs text-muted-foreground truncate">{product.name}</p>}
-                          {product.sku && <p className="text-[10px] text-muted-foreground/50 font-mono font-number">{product.sku}</p>}
-                        </div>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-muted/60">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
+                              <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
+                                <Edit className="w-3.5 h-3.5" /> تعديل
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => confirmDelete(product.id)} className="cursor-pointer rounded-lg gap-2 text-red-600 focus:text-red-600">
+                                <Trash2 className="w-3.5 h-3.5" /> حذف
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        }
+        mobile={
+          <div className="space-y-3">
+            {filtered.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">لا توجد منتجات مطابقة</p>
+              </div>
+            ) : filtered.map((product) => {
+              const primaryImage = product.product_images?.find(img => img.isPrimary);
+              return (
+                <Card key={product.id} borderless className="shadow-sm overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden ring-1 ring-black/5 shrink-0 bg-muted">
+                        {primaryImage?.url ? (
+                          <img src={primaryImage.url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImagePlus className="w-5 h-5 text-muted-foreground/40" />
+                          </div>
+                        )}
                       </div>
-                    </TableCell>
-                    <TableCell className="py-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className="text-sm font-medium truncate">{product.nameAr}</p>
+                            {product.isFeatured && (
+                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 rounded-full h-4 font-number bg-amber-50 text-amber-700 border-amber-200 shrink-0">مميز</Badge>
+                            )}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/60 shrink-0">
+                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
+                              <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
+                                <Edit className="w-3.5 h-3.5" /> تعديل
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => confirmDelete(product.id)} className="cursor-pointer rounded-lg gap-2 text-red-600 focus:text-red-600">
+                                <Trash2 className="w-3.5 h-3.5" /> حذف
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {product.name && <p className="text-xs text-muted-foreground truncate mt-0.5">{product.name}</p>}
+                        {product.sku && <p className="text-[10px] text-muted-foreground/50 font-mono font-number mt-0.5">{product.sku}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
                       <Badge variant="outline" className="text-[11px] font-normal rounded-full px-2.5 py-0.5">
                         {catName(product.categories) || "-"}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="py-3">
                       <div className="flex items-center gap-1.5">
-                        <span className={cn("font-number font-semibold text-sm", product.isOnSale ? "text-red-500 line-through" : "")}>
+                        <span className={cn("font-number text-sm", product.isOnSale ? "text-red-500 line-through" : "font-semibold")}>
                           {product.basePrice.toLocaleString("ar-EG")}
                         </span>
                         {product.isOnSale && product.salePrice && (
@@ -462,79 +593,45 @@ export default function Products() {
                         )}
                         <span className="text-xs text-muted-foreground/60">ج</span>
                       </div>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "font-number text-sm font-medium min-w-[24px]",
-                          product.totalStock === 0 ? "text-red-500" : product.totalStock <= 5 ? "text-amber-600" : "text-emerald-600"
-                        )}>
-                          {product.totalStock}
-                        </span>
-                        <div className="w-14 h-1.5 bg-muted/60 rounded-full overflow-hidden">
-                          <div className={cn(
-                            "h-full rounded-full",
-                            product.totalStock === 0 ? "bg-red-500" : product.totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500"
-                          )} style={{ width: `${Math.min(100, product.totalStock)}%` }} />
-                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2.5">
+                      <span className={cn("font-number text-xs font-medium", product.totalStock === 0 ? "text-red-500" : product.totalStock <= 5 ? "text-amber-600" : "text-emerald-600")}>
+                        {product.totalStock}
+                      </span>
+                      <div className="flex-1 h-1.5 bg-muted/60 rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full", product.totalStock === 0 ? "bg-red-500" : product.totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500")}
+                          style={{ width: `${Math.min(100, product.totalStock)}%` }} />
                       </div>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => toggleActive(product)}
-                          className={cn(
-                            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border",
-                            product.isActive
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                              : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
-                          )}
-                        >
-                          {product.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                          {product.isActive ? "نشط" : "غير نشط"}
-                        </button>
-                        {product.isOnSale && (
-                          <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0 rounded-full font-medium">
-                            عرض
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/60">
-                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
-                          <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
-                            <Edit className="w-3.5 h-3.5" /> تعديل
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => confirmDelete(product.id)} className="cursor-pointer rounded-lg gap-2 text-red-600 focus:text-red-600">
-                            <Trash2 className="w-3.5 h-3.5" /> حذف
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2.5">
+                      <button onClick={() => toggleActive(product)}
+                        className={cn("flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border",
+                          product.isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200")}>
+                        {product.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        {product.isActive ? "نشط" : "غير نشط"}
+                      </button>
+                      {product.isOnSale && (
+                        <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0 rounded-full font-medium">عرض</Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        }
+      />
 
       {/* Product Form Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); resetForm(); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg">{editingProduct ? "تعديل المنتج" : "إضافة منتج جديد"}</DialogTitle>
             <DialogDescription>{editingProduct ? "قم بتعديل بيانات المنتج" : "أضف منتج جديد للمتجر"}</DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="basic" className="mt-2">
-            <TabsList className="grid w-full grid-cols-4 p-1 bg-muted/50 rounded-xl">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 p-1 bg-muted/50 rounded-xl">
               <TabsTrigger value="basic" className="rounded-lg text-sm">أساسي</TabsTrigger>
               <TabsTrigger value="images" className="rounded-lg text-sm">الصور</TabsTrigger>
               <TabsTrigger value="variants" className="rounded-lg text-sm">المتغيرات</TabsTrigger>
@@ -542,7 +639,7 @@ export default function Products() {
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">الاسم (العربية) *</Label>
                   <Input value={nameAr} onChange={(e) => setNameAr(e.target.value)} className="bg-muted/30 focus:bg-background" />
@@ -552,7 +649,7 @@ export default function Products() {
                   <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-muted/30 focus:bg-background" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">الوصف (العربية)</Label>
                   <Textarea value={descriptionAr} onChange={(e) => setDescriptionAr(e.target.value)} rows={3} className="bg-muted/30 focus:bg-background resize-none" />
@@ -562,7 +659,7 @@ export default function Products() {
                   <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="bg-muted/30 focus:bg-background resize-none" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">الفئة</Label>
                   <Select value={categoryId} onValueChange={setCategoryId}>
@@ -582,26 +679,26 @@ export default function Products() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">السعر الأساسي *</Label>
-                  <Input type="number" value={basePrice} onChange={(e) => setBasePrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  <Input type="number" inputMode="numeric" value={basePrice} onChange={(e) => setBasePrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">سعر البيع</Label>
-                  <Input type="number" value={salePrice ?? ""} onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : null)} className="bg-muted/30 focus:bg-background font-number" />
+                  <Input type="number" inputMode="numeric" value={salePrice ?? ""} onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : null)} className="bg-muted/30 focus:bg-background font-number" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">المخزون</Label>
-                  <Input type="number" value={totalStock} onChange={(e) => setTotalStock(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  <Input type="number" inputMode="numeric" value={totalStock} onChange={(e) => setTotalStock(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">SKU</Label>
                   <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="APL-IP16" className="bg-muted/30 focus:bg-background font-mono" />
                 </div>
-                <div className="flex items-center gap-5 pt-6">
+                <div className="flex flex-wrap items-center gap-4 pt-6">
                   <div className="flex items-center gap-2">
                     <Switch checked={isOnSale} onCheckedChange={setIsOnSale} id="onSale" />
                     <Label htmlFor="onSale" className="text-sm cursor-pointer">عرض</Label>
@@ -646,7 +743,7 @@ export default function Products() {
                 )}
               </div>
               {images.length > 0 && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {images.map((img, i) => (
                     <div key={i} className="relative group rounded-lg overflow-hidden ring-1 ring-black/5">
                       <div className="aspect-square">
@@ -660,12 +757,12 @@ export default function Products() {
                       </div>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                         <button onClick={() => setImages(images.filter((_, idx) => idx !== i))}
-                          className="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
-                          <X className="w-3.5 h-3.5" />
+                          className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors">
+                          <X className="w-4 h-4" />
                         </button>
                         {!img.isPrimary && (
                           <button onClick={() => setImages(images.map((im, idx) => ({ ...im, isPrimary: idx === i })))}
-                            className="w-7 h-7 bg-white/90 text-foreground rounded-full flex items-center justify-center hover:bg-white transition-colors text-[10px] font-bold">
+                            className="w-10 h-10 bg-white/90 text-foreground rounded-full flex items-center justify-center hover:bg-white transition-colors text-xs font-bold">
                             P
                           </button>
                         )}
@@ -700,13 +797,13 @@ export default function Products() {
                           <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         <Input placeholder="اللون" value={v.color || ""} onChange={(e) => updateVariant(i, "color", e.target.value)} className="bg-white/50 font-number" />
                         <Input placeholder="Hex (#000000)" value={v.colorHex || ""} onChange={(e) => updateVariant(i, "colorHex", e.target.value)} className="bg-white/50 font-mono" />
                         <Input placeholder="التخزين" value={v.storage || ""} onChange={(e) => updateVariant(i, "storage", e.target.value)} className="bg-white/50 font-number" />
                         <Input placeholder="RAM" value={v.ram || ""} onChange={(e) => updateVariant(i, "ram", e.target.value)} className="bg-white/50" />
-                        <Input type="number" placeholder="السعر" value={v.price} onChange={(e) => updateVariant(i, "price", Number(e.target.value))} className="bg-white/50 font-number" />
-                        <Input type="number" placeholder="المخزون" value={v.stock} onChange={(e) => updateVariant(i, "stock", Number(e.target.value))} className="bg-white/50 font-number" />
+                        <Input type="number" inputMode="numeric" placeholder="السعر" value={v.price} onChange={(e) => updateVariant(i, "price", Number(e.target.value))} className="bg-white/50 font-number" />
+                        <Input type="number" inputMode="numeric" placeholder="المخزون" value={v.stock} onChange={(e) => updateVariant(i, "stock", Number(e.target.value))} className="bg-white/50 font-number" />
                       </div>
                     </div>
                   ))}
@@ -732,7 +829,7 @@ export default function Products() {
                           <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         <Input placeholder="المجموعة (Display...)" value={s.groupName} onChange={(e) => updateSpec(i, "groupName", e.target.value)} className="bg-white/50" />
                         <Input placeholder="المفتاح (Screen Size...)" value={s.key} onChange={(e) => updateSpec(i, "key", e.target.value)} className="bg-white/50" />
                         <Input placeholder="القيمة (6.7 inches...)" value={s.value} onChange={(e) => updateSpec(i, "value", e.target.value)} className="bg-white/50" />

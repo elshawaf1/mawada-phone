@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { SkeletonKPI, SkeletonChart } from "@/components/ui/skeleton";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 const datePresets = [
   { value: "7", label: "7 أيام" },
@@ -100,6 +101,7 @@ function ReportsKpiCard({
 }
 
 export default function Reports() {
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const [dateRange, setDateRange] = useState("30");
   const [loading, setLoading] = useState(true);
 
@@ -328,7 +330,7 @@ export default function Reports() {
             <CardDescription>تطور الإيرادات خلال الفترة</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={isMobile ? 180 : 300}>
               <AreaChart data={revenueChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="rRevGrad" x1="0" y1="0" x2="0" y2="1">
@@ -388,7 +390,7 @@ export default function Reports() {
               <p className="text-center text-muted-foreground py-10 text-sm">لا توجد بيانات</p>
             ) : (
               <div className="flex flex-col items-center">
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={isMobile ? 140 : 200}>
                   <PieChart>
                     <Pie data={paymentChartData} dataKey="count" nameKey="method" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3}>
                       {paymentChartData.map((entry: any, idx: number) => (
@@ -421,7 +423,7 @@ export default function Reports() {
             {categoryChartData.length === 0 ? (
               <p className="text-center text-muted-foreground py-10 text-sm">لا توجد بيانات</p>
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={isMobile ? 160 : 260}>
                 <BarChart data={categoryChartData} layout="vertical" margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} horizontal={false} />
                   <XAxis type="number" fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
@@ -446,7 +448,7 @@ export default function Reports() {
           <CardDescription>توزيع الطلبات حسب الساعة</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={isMobile ? 140 : 220}>
             <BarChart data={hourlyChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} vertical={false} />
               <XAxis dataKey="hour" fontSize={10} tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />

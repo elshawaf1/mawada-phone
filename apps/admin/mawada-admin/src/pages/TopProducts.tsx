@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -104,67 +105,111 @@ export default function TopProducts() {
       ) : (
         <>
           {/* Table */}
-          <Card borderless className="shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">قائمة المنتجات</CardTitle>
-                <Badge variant="secondary" className="rounded-full text-xs font-number px-3">
-                  {products.length} منتج
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-border/40 hover:bg-transparent">
-                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9 w-12">#</TableHead>
-                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المنتج</TableHead>
-                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الاسم (EN)</TableHead>
-                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">عدد المبيعات</TableHead>
-                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">النسبة</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.map((product, idx) => (
-                    <TableRow key={product.id} className="hover:bg-muted/20 transition-colors border-b border-border/20">
-                      <TableCell className="py-3">
+          <ResponsiveTable
+            desktop={
+              <Card borderless className="shadow-sm">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">قائمة المنتجات</CardTitle>
+                    <Badge variant="secondary" className="rounded-full text-xs font-number px-3">
+                      {products.length} منتج
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b border-border/40 hover:bg-transparent">
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9 w-12">#</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المنتج</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9 hidden sm:table-cell">الاسم (EN)</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">عدد المبيعات</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">النسبة</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((product, idx) => (
+                        <TableRow key={product.id} className="hover:bg-muted/20 transition-colors border-b border-border/20">
+                          <TableCell className="py-3">
+                            <span className={cn(
+                              "inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold font-number",
+                              rankBg(idx)
+                            )}>
+                              {idx + 1}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{product.nameAr}</span>
+                              {rankIcon(idx)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground py-3 hidden sm:table-cell">{product.name || "-"}</TableCell>
+                          <TableCell className="font-number font-semibold text-sm py-3">{product.soldCount}</TableCell>
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-muted/60 rounded-full overflow-hidden max-w-[120px] sm:max-w-none">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-full transition-all",
+                                    idx === 0 ? "bg-emerald-500" : idx === 1 ? "bg-blue-500" : idx === 2 ? "bg-amber-500" : "bg-primary/40"
+                                  )}
+                                  style={{ width: `${maxSold > 0 ? (product.soldCount / maxSold) * 100 : 0}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground font-number">
+                                {maxSold > 0 ? Math.round((product.soldCount / maxSold) * 100) : 0}%
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            }
+            mobile={
+              <div className="space-y-3">
+                {products.map((product, idx) => (
+                  <Card key={product.id} borderless className="shadow-sm overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
                         <span className={cn(
-                          "inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold font-number",
+                          "inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold font-number shrink-0",
                           rankBg(idx)
                         )}>
                           {idx + 1}
                         </span>
-                      </TableCell>
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{product.nameAr}</span>
-                          {rankIcon(idx)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground py-3">{product.name || "-"}</TableCell>
-                      <TableCell className="font-number font-semibold text-sm py-3">{product.soldCount}</TableCell>
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-muted/60 rounded-full overflow-hidden max-w-[120px]">
-                            <div
-                              className={cn(
-                                "h-full rounded-full transition-all",
-                                idx === 0 ? "bg-emerald-500" : idx === 1 ? "bg-blue-500" : idx === 2 ? "bg-amber-500" : "bg-primary/40"
-                              )}
-                              style={{ width: `${maxSold > 0 ? (product.soldCount / maxSold) * 100 : 0}%` }}
-                            />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium truncate">{product.nameAr}</span>
+                            {rankIcon(idx)}
                           </div>
-                          <span className="text-xs text-muted-foreground font-number">
-                            {maxSold > 0 ? Math.round((product.soldCount / maxSold) * 100) : 0}%
-                          </span>
+                          {product.name && <p className="text-xs text-muted-foreground truncate">{product.name}</p>}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                      </div>
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-sm text-muted-foreground">عدد المبيعات</span>
+                        <span className="font-number font-bold text-sm">{product.soldCount}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="flex-1 h-2 bg-muted/60 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all", idx === 0 ? "bg-emerald-500" : idx === 1 ? "bg-blue-500" : idx === 2 ? "bg-amber-500" : "bg-primary/40")}
+                            style={{ width: `${maxSold > 0 ? (product.soldCount / maxSold) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground font-number">
+                          {maxSold > 0 ? Math.round((product.soldCount / maxSold) * 100) : 0}%
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            }
+          />
         </>
       )}
     </div>

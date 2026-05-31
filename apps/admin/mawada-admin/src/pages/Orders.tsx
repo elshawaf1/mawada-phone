@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Eye, Loader2, Package, MapPin, CreditCard, Phone, Mail, MoreHorizontal } from "lucide-react";
+import { Search, Eye, Loader2, Package, MapPin, CreditCard, Phone, Mail, MoreHorizontal, Clock } from "lucide-react";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useToast } from "@/hooks/use-toast";
 
 interface Order {
@@ -239,64 +240,105 @@ export default function Orders() {
         </Select>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="text-right font-semibold text-foreground/70">رقم الطلب</TableHead>
-            <TableHead className="text-right font-semibold text-foreground/70">العميل</TableHead>
-            <TableHead className="text-right font-semibold text-foreground/70">الحالة</TableHead>
-            <TableHead className="text-right font-semibold text-foreground/70">الدفع</TableHead>
-            <TableHead className="text-right font-semibold text-foreground/70">المبلغ</TableHead>
-            <TableHead className="text-right font-semibold text-foreground/70">التاريخ</TableHead>
-            <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filtered.length === 0 ? (
-            <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">لا توجد طلبات</TableCell></TableRow>
-          ) : filtered.map((order) => (
-            <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
-              <TableCell className="font-mono text-sm font-medium">{order.orderNumber}</TableCell>
-              <TableCell className="font-medium">{order.profiles?.name || "-"}</TableCell>
-              <TableCell>
-                <Badge className={(statusColors[order.status] || "bg-gray-100 text-gray-800") + " font-medium px-2.5 py-0.5"}>
-                  {statusLabels[order.status] || order.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
-                  <Badge variant="outline" className="font-medium">{paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</Badge>
-                  <Badge className={(paymentStatusColors[order.paymentStatus] || "bg-gray-100 text-gray-800") + " font-medium px-2 py-0.5"}>
-                    {paymentStatusLabels[order.paymentStatus] || order.paymentStatus}
-                  </Badge>
-                </div>
-              </TableCell>
-              <TableCell className="font-bold">{Number(order.total).toLocaleString("ar-EG")} ج</TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {new Date(order.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/60">
-                      <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+      <ResponsiveTable
+        desktop={
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="text-right font-semibold text-foreground/70">رقم الطلب</TableHead>
+                <TableHead className="text-right font-semibold text-foreground/70">العميل</TableHead>
+                <TableHead className="text-right font-semibold text-foreground/70">الحالة</TableHead>
+                <TableHead className="text-right font-semibold text-foreground/70">الدفع</TableHead>
+                <TableHead className="text-right font-semibold text-foreground/70">المبلغ</TableHead>
+                <TableHead className="text-right font-semibold text-foreground/70">التاريخ</TableHead>
+                <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">لا توجد طلبات</TableCell></TableRow>
+              ) : filtered.map((order) => (
+                <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
+                  <TableCell className="font-mono text-sm font-medium">{order.orderNumber}</TableCell>
+                  <TableCell className="font-medium">{order.profiles?.name || "-"}</TableCell>
+                  <TableCell>
+                    <Badge className={(statusColors[order.status] || "bg-gray-100 text-gray-800") + " font-medium px-2.5 py-0.5"}>
+                      {statusLabels[order.status] || order.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="outline" className="font-medium">{paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</Badge>
+                      <Badge className={(paymentStatusColors[order.paymentStatus] || "bg-gray-100 text-gray-800") + " font-medium px-2 py-0.5"}>
+                        {paymentStatusLabels[order.paymentStatus] || order.paymentStatus}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-bold">{Number(order.total).toLocaleString("ar-EG")} ج</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(order.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-muted/60">
+                          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
+                        <DropdownMenuItem onClick={() => openDetail(order)} className="cursor-pointer rounded-lg gap-2">
+                          <Eye className="w-3.5 h-3.5" /> عرض التفاصيل
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        }
+        mobile={
+          <div className="space-y-3">
+            {filtered.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">لا توجد طلبات</p>
+              </div>
+            ) : filtered.map((order) => (
+              <Card key={order.id} borderless className="shadow-sm overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm font-bold text-primary">{order.orderNumber}</span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date(order.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" })}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium mt-2">{order.profiles?.name || "-"}</p>
+                  <div className="flex items-center gap-2 mt-2.5">
+                    <Badge className={(statusColors[order.status] || "bg-gray-100 text-gray-800") + " font-medium px-2 py-0.5"}>
+                      {statusLabels[order.status] || order.status}
+                    </Badge>
+                    <Badge className={(paymentStatusColors[order.paymentStatus] || "bg-gray-100 text-gray-800") + " font-medium px-2 py-0.5"}>
+                      {paymentStatusLabels[order.paymentStatus] || order.paymentStatus}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
+                    <span className="font-bold font-number text-lg">{Number(order.total).toLocaleString("ar-EG")} ج</span>
+                    <Button variant="ghost" size="sm" onClick={() => openDetail(order)} className="rounded-xl gap-1 text-primary">
+                      <Eye className="w-4 h-4" /> تفاصيل
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
-                    <DropdownMenuItem onClick={() => openDetail(order)} className="cursor-pointer rounded-lg gap-2">
-                      <Eye className="w-3.5 h-3.5" /> عرض التفاصيل
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        }
+      />
 
       {/* Order Detail Dialog */}
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>تفاصيل الطلب</DialogTitle>
             <DialogDescription>{selectedOrder?.orderNumber}</DialogDescription>
@@ -305,7 +347,7 @@ export default function Orders() {
           {selectedOrder && (
             <div className="space-y-6">
               {/* Customer Info */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card className="shadow-sm">
                   <CardContent className="p-4 space-y-2">
                     <h3 className="font-semibold flex items-center gap-2 text-sm"><Package className="w-4 h-4 text-primary" /> معلومات العميل</h3>
@@ -358,7 +400,7 @@ export default function Orders() {
               <Card className="shadow-sm">
                 <CardContent className="p-4 space-y-2">
                   <h3 className="font-semibold flex items-center gap-2 text-sm"><CreditCard className="w-4 h-4 text-primary" /> معلومات الدفع</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">طريقة الدفع:</span>
                       <Select
@@ -434,7 +476,7 @@ export default function Orders() {
               </Card>
 
               {/* Update Status */}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <Label>تحديث الحالة:</Label>
                 <Select
                   value={selectedOrder.status}

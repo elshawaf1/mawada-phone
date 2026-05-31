@@ -5,10 +5,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, ShoppingCart, Calendar, TrendingUp, TrendingDown, AlertTriangle, ArrowLeft, Loader2, Package } from "lucide-react";
+import { DollarSign, ShoppingCart, Calendar, TrendingUp, TrendingDown, AlertTriangle, ArrowLeft, Loader2, Package, Clock } from "lucide-react";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { SkeletonKPI, SkeletonChart, SkeletonTable } from "@/components/ui/skeleton";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
@@ -196,6 +198,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Dashboard() {
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const [stats, setStats] = useState<Stats>({ totalRevenue: 0, totalOrders: 0, totalProducts: 0, totalCustomers: 0, lowStockCount: 0, avgOrderValue: 0 });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
@@ -397,7 +400,7 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={320}>
+            <ResponsiveContainer width="100%" height={isMobile ? 180 : 320}>
               <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
@@ -437,41 +440,76 @@ export default function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent className="pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b border-border/40 hover:bg-transparent">
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الطلب</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">العميل</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الحالة</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المبلغ</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">التاريخ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="p-0"><EmptyState icon={Package} title="لا توجد طلبات" description="لم يتم تسجيل أي طلبات بعد" /></TableCell></TableRow>
-                ) : recentOrders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-muted/20 transition-colors border-b border-border/20">
-                    <TableCell className="font-mono text-xs font-medium py-3">{order.orderNumber}</TableCell>
-                    <TableCell className="text-sm py-3">
-                      {Array.isArray(order.profiles) ? order.profiles[0]?.name || "-" : order.profiles?.name || "-"}
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <span className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border",
-                        statusBadgeVariants[order.status] || "bg-gray-50 text-gray-700 border-gray-200"
-                      )}>
-                        {statusLabels[order.status] || order.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="font-number font-semibold text-sm py-3">{Number(order.total).toLocaleString("ar-EG")} ج</TableCell>
-                    <TableCell className="text-xs text-muted-foreground py-3">
-                      {new Date(order.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" })}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ResponsiveTable
+              desktop={
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-border/40 hover:bg-transparent">
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الطلب</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">العميل</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الحالة</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المبلغ</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">التاريخ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentOrders.length === 0 ? (
+                      <TableRow><TableCell colSpan={5} className="p-0"><EmptyState icon={Package} title="لا توجد طلبات" description="لم يتم تسجيل أي طلبات بعد" /></TableCell></TableRow>
+                    ) : recentOrders.map((order) => (
+                      <TableRow key={order.id} className="hover:bg-muted/20 transition-colors border-b border-border/20">
+                        <TableCell className="font-mono text-xs font-medium py-3">{order.orderNumber}</TableCell>
+                        <TableCell className="text-sm py-3">
+                          {Array.isArray(order.profiles) ? order.profiles[0]?.name || "-" : order.profiles?.name || "-"}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <span className={cn(
+                            "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border",
+                            statusBadgeVariants[order.status] || "bg-gray-50 text-gray-700 border-gray-200"
+                          )}>
+                            {statusLabels[order.status] || order.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-number font-semibold text-sm py-3">{Number(order.total).toLocaleString("ar-EG")} ج</TableCell>
+                        <TableCell className="text-xs text-muted-foreground py-3">
+                          {new Date(order.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              }
+              mobile={
+                <div className="space-y-2">
+                  {recentOrders.length === 0 ? (
+                    <EmptyState icon={Package} title="لا توجد طلبات" description="لم يتم تسجيل أي طلبات بعد" />
+                  ) : recentOrders.map((order) => (
+                    <div key={order.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-xl border border-border/30">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-primary">{order.orderNumber}</span>
+                          <span className={cn(
+                            "inline-flex items-center px-1.5 py-0 rounded-full text-[9px] font-medium border",
+                            statusBadgeVariants[order.status] || "bg-gray-50 text-gray-700 border-gray-200"
+                          )}>
+                            {statusLabels[order.status] || order.status}
+                          </span>
+                        </div>
+                        <p className="text-sm truncate mt-0.5">
+                          {Array.isArray(order.profiles) ? order.profiles[0]?.name || "-" : order.profiles?.name || "-"}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 mr-3">
+                        <p className="font-number font-semibold text-sm">{Number(order.total).toLocaleString("ar-EG")} ج</p>
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end mt-0.5">
+                          <Clock className="w-2.5 h-2.5" />
+                          {new Date(order.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              }
+            />
           </CardContent>
         </Card>
 

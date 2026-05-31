@@ -12,11 +12,11 @@ export default function Header({ onMenuClick, sidebarOpen, onCmdOpen }: HeaderPr
   const [showSearch, setShowSearch] = useState(false);
 
   return (
-    <header className="h-16 bg-card/80 backdrop-blur-xl border-b border-border/60 flex items-center px-5 gap-3 shrink-0 sticky top-0 z-10">
+    <header className="h-16 bg-card/80 backdrop-blur-xl border-b border-border/60 flex items-center px-5 gap-3 shrink-0 sticky top-0 z-10 safe-area-top">
       <button
         onClick={onMenuClick}
         className={cn(
-          "p-2 rounded-xl transition-all duration-300 relative overflow-hidden group",
+          "p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl transition-all duration-300 relative overflow-hidden group",
           "hover:bg-muted/70 active:scale-90",
           sidebarOpen
             ? "text-primary bg-primary/10 hover:bg-primary/15"
@@ -51,7 +51,7 @@ export default function Header({ onMenuClick, sidebarOpen, onCmdOpen }: HeaderPr
           className="flex items-center gap-2 text-muted-foreground/50 hover:text-foreground bg-muted/40 hover:bg-muted/70 rounded-xl px-4 py-2 text-sm transition-all flex-1 max-w-md border border-transparent hover:border-border/40 group active:scale-[0.98]"
         >
           <Search className="w-4 h-4" />
-          <span className="flex-1 text-right">ابحث في اللوحة...</span>
+          <span className="flex-1 text-right truncate">ابحث في اللوحة...</span>
           <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground/40 bg-background/50 rounded-md border border-border/40 ring-1 ring-border/30">
             <Command className="w-2.5 h-2.5" />K
           </kbd>
@@ -59,7 +59,7 @@ export default function Header({ onMenuClick, sidebarOpen, onCmdOpen }: HeaderPr
       )}
 
       <div className="flex items-center gap-1 mr-auto">
-        <button className="relative p-2.5 rounded-xl hover:bg-muted/70 transition-all text-muted-foreground/60 hover:text-foreground group active:scale-95">
+        <button className="relative p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-muted/70 transition-all text-muted-foreground/60 hover:text-foreground group active:scale-95">
           <Bell className="w-4.5 h-4.5" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full ring-2 ring-card/80" />
         </button>

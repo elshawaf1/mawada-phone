@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { PackageSearch, Search, AlertTriangle, Box, Loader2, MoreHorizontal, Edit, EyeOff, Eye, ChevronDown, ChevronUp, Save, X } from "lucide-react";
+import { PackageSearch, Search, AlertTriangle, Box, Loader2, MoreHorizontal, Edit, EyeOff, Eye, ChevronDown, ChevronUp, Save, X, Tag } from "lucide-react";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { SkeletonKPI, SkeletonTable } from "@/components/ui/skeleton";
@@ -262,80 +263,179 @@ export default function Inventory() {
       </div>
 
       {/* Product Table */}
-      <Card borderless className="shadow-sm">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent border-b border-border/40">
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10 w-8"></TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">المنتج</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">التصنيف</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">SKU</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">السعر الأساسي</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">المخزون</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">الحالة</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">إجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
-                  <PackageSearch className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">لا توجد منتجات مطابقة</p>
-                </TableCell></TableRow>
-              ) : filtered.map((product) => {
-                const isExpanded = expandedId === product.id;
-                const totalVariantStock = product.product_variants.reduce((s, v) => s + v.stock, 0);
-                const stockPct = product.totalStock > 0 ? Math.min(100, Math.round((totalVariantStock / Math.max(totalVariantStock, 1)) * 100)) : 0;
-                return (
-                  <TableRow key={product.id} className={cn("hover:bg-muted/20 transition-colors border-b border-border/20", !product.isActive && "opacity-60")}>
-                    <TableCell className="py-2.5">
-                      <button
-                        onClick={() => setExpandedId(isExpanded ? null : product.id)}
-                        className="w-6 h-6 rounded-md hover:bg-muted/60 flex items-center justify-center"
-                      >
-                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
-                      </button>
-                    </TableCell>
-                    <TableCell className="py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0">
-                          <Box className="w-4 h-4 text-primary/60" />
+      <ResponsiveTable
+        desktop={
+          <>
+            <Card borderless className="shadow-sm">
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-b border-border/40">
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10 w-8"></TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">المنتج</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">التصنيف</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">SKU</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">السعر الأساسي</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">المخزون</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">الحالة</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-10">إجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 ? (
+                      <TableRow><TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
+                        <PackageSearch className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">لا توجد منتجات مطابقة</p>
+                      </TableCell></TableRow>
+                    ) : filtered.map((product) => {
+                      const isExpanded = expandedId === product.id;
+                      const totalVariantStock = product.product_variants.reduce((s, v) => s + v.stock, 0);
+                      const stockPct = product.totalStock > 0 ? Math.min(100, Math.round((totalVariantStock / Math.max(totalVariantStock, 1)) * 100)) : 0;
+                      return (
+                        <TableRow key={product.id} className={cn("hover:bg-muted/20 transition-colors border-b border-border/20", !product.isActive && "opacity-60")}>
+                          <TableCell className="py-2.5">
+                            <button
+                              onClick={() => setExpandedId(isExpanded ? null : product.id)}
+                              className="w-6 h-6 sm:w-9 sm:h-9 min-w-[44px] min-h-[44px] rounded-md hover:bg-muted/60 flex items-center justify-center"
+                            >
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                            </button>
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0">
+                                <Box className="w-4 h-4 text-primary/60" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{product.nameAr}</p>
+                                {product.name && <p className="text-xs text-muted-foreground">{product.name}</p>}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground py-2.5">{catName(product.categories) || "-"}</TableCell>
+                          <TableCell className="font-number text-xs text-muted-foreground py-2.5 font-mono">{product.sku || "-"}</TableCell>
+                          <TableCell className="font-number text-sm font-medium py-2.5">{Number(product.basePrice).toLocaleString()} ج</TableCell>
+                          <TableCell className="py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className={cn(
+                                "font-number font-bold text-sm",
+                                product.totalStock === 0 ? "text-red-500" : product.totalStock <= 5 ? "text-amber-500" : "text-emerald-600"
+                              )}>
+                                {product.totalStock}
+                              </span>
+                              <div className="w-16 h-1.5 bg-muted/60 rounded-full overflow-hidden">
+                                <div className={cn(
+                                  "h-full rounded-full",
+                                  product.totalStock === 0 ? "bg-red-500" : product.totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500"
+                                )} style={{ width: `${Math.min(100, product.totalStock)}%` }} />
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <Badge variant={product.isActive ? "default" : "secondary"} className="text-[11px] px-2 py-0.5 rounded-full">
+                              {product.isActive ? "نشط" : "غير نشط"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-muted/60">
+                                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="rounded-xl min-w-[160px]">
+                                <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
+                                  <Edit className="w-3.5 h-3.5" /> تعديل المخزون
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => toggleActive(product)} className="cursor-pointer rounded-lg gap-2">
+                                  {product.isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                  {product.isActive ? "إخفاء" : "إظهار"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+            {expandedId && (
+              <Card borderless className="shadow-sm bg-muted/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">تفاصيل المتغيرات</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-b border-border/40">
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">اللون</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">السعة / الرام</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">SKU</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">السعر</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">المخزون</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">الحالة</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(products.find(p => p.id === expandedId)?.product_variants || []).map((v) => (
+                        <TableRow key={v.id} className="border-b border-border/10">
+                          <TableCell className="py-2">
+                            <div className="flex items-center gap-2">
+                              {v.colorHex && <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: v.colorHex }} />}
+                              <span className="text-sm">{v.color || "-"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{[v.storage, v.ram].filter(Boolean).join(" / ") || "-"}</TableCell>
+                          <TableCell className="font-number text-xs font-mono text-muted-foreground">{v.sku || "-"}</TableCell>
+                          <TableCell className="font-number text-sm">{Number(v.price).toLocaleString()} ج</TableCell>
+                          <TableCell className="py-2">
+                            <span className={cn("font-number font-medium text-sm", v.stock === 0 ? "text-red-500" : v.stock <= 2 ? "text-amber-500" : "text-emerald-600")}>
+                              {v.stock}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={v.isActive ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 rounded-full">{v.isActive ? "نشط" : "غير نشط"}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {(products.find(p => p.id === expandedId)?.product_variants || []).length === 0 && (
+                        <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">لا توجد متغيرات لهذا المنتج</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        }
+        mobile={
+          <div className="space-y-3">
+            {filtered.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <PackageSearch className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">لا توجد منتجات مطابقة</p>
+              </div>
+            ) : filtered.map((product) => {
+              const isExpanded = expandedId === product.id;
+              const variants = product.product_variants || [];
+              return (
+                <Card key={product.id} borderless className="shadow-sm overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0">
+                          <Box className="w-5 h-5 text-primary/60" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{product.nameAr}</p>
-                          {product.name && <p className="text-xs text-muted-foreground">{product.name}</p>}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{product.nameAr}</p>
+                          {product.name && <p className="text-xs text-muted-foreground truncate">{product.name}</p>}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground py-2.5">{catName(product.categories) || "-"}</TableCell>
-                    <TableCell className="font-number text-xs text-muted-foreground py-2.5 font-mono">{product.sku || "-"}</TableCell>
-                    <TableCell className="font-number text-sm font-medium py-2.5">{Number(product.basePrice).toLocaleString()} ج</TableCell>
-                    <TableCell className="py-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "font-number font-bold text-sm",
-                          product.totalStock === 0 ? "text-red-500" : product.totalStock <= 5 ? "text-amber-500" : "text-emerald-600"
-                        )}>
-                          {product.totalStock}
-                        </span>
-                        <div className="w-16 h-1.5 bg-muted/60 rounded-full overflow-hidden">
-                          <div className={cn(
-                            "h-full rounded-full",
-                            product.totalStock === 0 ? "bg-red-500" : product.totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500"
-                          )} style={{ width: `${Math.min(100, product.totalStock)}%` }} />
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2.5">
-                      <Badge variant={product.isActive ? "default" : "secondary"} className="text-[11px] px-2 py-0.5 rounded-full">
-                        {product.isActive ? "نشط" : "غير نشط"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="py-2.5">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/60">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/60 shrink-0">
                             <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -349,67 +449,70 @@ export default function Inventory() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Variants expansion section */}
-      {expandedId && (
-        <Card borderless className="shadow-sm bg-muted/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">تفاصيل المتغيرات</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-b border-border/40">
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">اللون</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">السعة / الرام</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">SKU</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">السعر</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">المخزون</TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-8">الحالة</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(products.find(p => p.id === expandedId)?.product_variants || []).map((v) => (
-                  <TableRow key={v.id} className="border-b border-border/10">
-                    <TableCell className="py-2">
-                      <div className="flex items-center gap-2">
-                        {v.colorHex && <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: v.colorHex }} />}
-                        <span className="text-sm">{v.color || "-"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{[v.storage, v.ram].filter(Boolean).join(" / ") || "-"}</TableCell>
-                    <TableCell className="font-number text-xs font-mono text-muted-foreground">{v.sku || "-"}</TableCell>
-                    <TableCell className="font-number text-sm">{Number(v.price).toLocaleString()} ج</TableCell>
-                    <TableCell className="py-2">
-                      <span className={cn("font-number font-medium text-sm", v.stock === 0 ? "text-red-500" : v.stock <= 2 ? "text-amber-500" : "text-emerald-600")}>
-                        {v.stock}
+                    </div>
+                    <div className="flex items-center gap-3 mt-2.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Tag className="w-3 h-3" /> {catName(product.categories) || "-"}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={v.isActive ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 rounded-full">{v.isActive ? "نشط" : "غير نشط"}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(products.find(p => p.id === expandedId)?.product_variants || []).length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">لا توجد متغيرات لهذا المنتج</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                      <span className="font-mono">{product.sku || "-"}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="font-number font-semibold text-sm">{Number(product.basePrice).toLocaleString()} ج</span>
+                      <Badge variant={product.isActive ? "default" : "secondary"} className="text-[10px] px-2 py-0.5 rounded-full">
+                        {product.isActive ? "نشط" : "غير نشط"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={cn("font-number font-bold text-sm", product.totalStock === 0 ? "text-red-500" : product.totalStock <= 5 ? "text-amber-500" : "text-emerald-600")}>
+                        {product.totalStock}
+                      </span>
+                      <div className="flex-1 h-1.5 bg-muted/60 rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full", product.totalStock === 0 ? "bg-red-500" : product.totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500")}
+                          style={{ width: `${Math.min(100, product.totalStock)}%` }} />
+                      </div>
+                    </div>
+                    {variants.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : product.id)}
+                          className="flex items-center justify-center gap-1 w-full mt-3 pt-2.5 border-t border-border/40 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                        >
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          {isExpanded ? "إخفاء المتغيرات" : `عرض المتغيرات (${variants.length})`}
+                        </button>
+                        {isExpanded && (
+                          <div className="mt-2 space-y-2">
+                            {variants.map((v) => (
+                              <div key={v.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2.5 text-xs">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  {v.colorHex && <span className="w-3 h-3 rounded-full shrink-0 border" style={{ backgroundColor: v.colorHex }} />}
+                                  <span className="truncate">{v.color || "-"}</span>
+                                  <span className="text-muted-foreground">|</span>
+                                  <span className="truncate text-muted-foreground">{[v.storage, v.ram].filter(Boolean).join(" / ") || "-"}</span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={cn("font-number font-medium", v.stock === 0 ? "text-red-500" : v.stock <= 2 ? "text-amber-500" : "text-emerald-600")}>
+                                    {v.stock}
+                                  </span>
+                                  <Badge variant={v.isActive ? "default" : "secondary"} className="text-[9px] px-1.5 py-0 rounded-full">{v.isActive ? "نشط" : "غير نشط"}</Badge>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        }
+      />
 
       {/* Stock Edit Dialog */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>تعديل المخزون</DialogTitle>
             <DialogDescription>{editingProduct?.nameAr}</DialogDescription>
@@ -418,7 +521,7 @@ export default function Inventory() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>المخزون الإجمالي</Label>
-                <Input type="number" value={editTotalStock} onChange={(e) => setEditTotalStock(parseInt(e.target.value) || 0)} className="font-number" />
+                <Input type="number" inputMode="numeric" value={editTotalStock} onChange={(e) => setEditTotalStock(parseInt(e.target.value) || 0)} className="font-number" />
               </div>
               {editVariants.length > 0 && (
                 <div className="space-y-3 pt-2 border-t">
@@ -435,6 +538,7 @@ export default function Inventory() {
                         </div>
                         <Input
                           type="number"
+                          inputMode="numeric"
                           value={v.stock}
                           onChange={(e) => setEditVariants(prev => prev.map(x => x.id === v.id ? { ...x, stock: parseInt(e.target.value) || 0 } : x))}
                           className="w-24 font-number text-sm"
