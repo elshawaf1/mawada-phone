@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, ShoppingCart, Calendar, TrendingUp, TrendingDown, AlertTriangle, ArrowLeft, Loader2, Package, Clock } from "lucide-react";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ComposedChart, Area, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { SkeletonKPI, SkeletonChart, SkeletonTable } from "@/components/ui/skeleton";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -394,22 +394,18 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">الإيرادات والطلبات</CardTitle>
-                <CardDescription>تحليل الأداء خلال الفترة</CardDescription>
+                <CardTitle className="text-base">الإيرادات</CardTitle>
+                <CardDescription>الإيرادات اليومية وحجم الطلبات</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={isMobile ? 180 : 320}>
-              <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={isMobile ? 200 : 320}>
+              <ComposedChart data={revenueData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.2} />
                     <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="ordGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
@@ -418,8 +414,8 @@ export default function Dashboard() {
                 <YAxis yAxisId="right" orientation="right" fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2.5} fill="url(#revGrad)" name="الإيرادات" />
-                <Area yAxisId="right" type="monotone" dataKey="orders" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#ordGrad)" name="الطلبات" />
-              </AreaChart>
+                <Bar yAxisId="right" dataKey="orders" fill="#8B5CF6" radius={[3, 3, 0, 0]} name="الطلبات" maxBarSize={40} />
+              </ComposedChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
