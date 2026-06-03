@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, PackageSearch } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, BarChart3, PackageSearch, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { href: "/orders", label: "الطلبات", icon: ShoppingCart },
   { href: "/reports", label: "التقارير", icon: BarChart3 },
   { href: "/inventory", label: "المخزون", icon: PackageSearch },
+  { href: "/notifications", label: "الإشعارات", icon: Bell },
 ];
 
 export default function BottomNav() {

@@ -9,6 +9,7 @@ import Marketing from "@/pages/Marketing";
 import TopProducts from "@/pages/TopProducts";
 import Reports from "@/pages/Reports";
 import Inventory from "@/pages/Inventory";
+import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 
@@ -28,6 +29,7 @@ function App() {
               <Route path="/top-products" component={TopProducts} />
               <Route path="/reports" component={Reports} />
               <Route path="/inventory" component={Inventory} />
+              <Route path="/notifications" component={Notifications} />
               <Route component={NotFound} />
             </Switch>
           </Layout>

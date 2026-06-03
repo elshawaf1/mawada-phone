@@ -35,17 +35,19 @@ serve(async (req) => {
       throw new Error('Title and body are required')
     }
 
+    const baseNotification = {
+      title: title || '',
+      titleAr: titleAr || title || '',
+      body: body || '',
+      bodyAr: bodyAr || body || '',
+      type: type || 'info',
+      sentBy: user.id,
+    }
+
     if (targetUserId) {
       await supabaseClient
         .from('notifications')
-        .insert({
-          userId: targetUserId,
-          title: title || '',
-          titleAr: titleAr || title || '',
-          body: body || '',
-          bodyAr: bodyAr || body || '',
-          type: type || 'info',
-        })
+        .insert({ ...baseNotification, userId: targetUserId })
     } else {
       const { data: users } = await supabaseClient
         .from('profiles')
@@ -54,12 +56,8 @@ serve(async (req) => {
 
       if (users && users.length > 0) {
         const notifications = users.map(u => ({
+          ...baseNotification,
           userId: u.id,
-          title: title || '',
-          titleAr: titleAr || title || '',
-          body: body || '',
-          bodyAr: bodyAr || body || '',
-          type: type || 'info',
         }))
 
         await supabaseClient

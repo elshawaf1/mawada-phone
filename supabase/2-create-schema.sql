@@ -233,6 +233,7 @@ CREATE TABLE public.notifications (
   "bodyAr" text,
   type text DEFAULT 'info' CHECK (type IN ('info', 'order', 'promo', 'system')),
   "isRead" boolean DEFAULT false,
+  "sentBy" uuid REFERENCES public.profiles(id),
   "createdAt" timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -345,6 +346,9 @@ CREATE POLICY "Users manage own addresses" ON public.addresses FOR ALL USING ("u
 CREATE POLICY "Users view own notifications" ON public.notifications FOR SELECT USING ("userId" = auth.uid());
 CREATE POLICY "Users update own notifications" ON public.notifications FOR UPDATE USING ("userId" = auth.uid());
 CREATE POLICY "Admins can create notifications" ON public.notifications FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+CREATE POLICY "Admins can view all notifications" ON public.notifications FOR SELECT USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+CREATE POLICY "Admins can delete notifications" ON public.notifications FOR DELETE USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN'));
+CREATE POLICY "Admins can update notifications" ON public.notifications FOR UPDATE USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN'));
 
 -- Product Images
 CREATE POLICY "Anyone can view product images" ON public.product_images FOR SELECT USING (true);

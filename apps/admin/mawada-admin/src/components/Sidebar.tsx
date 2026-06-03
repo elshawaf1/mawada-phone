@@ -8,6 +8,7 @@ import {
   TrendingUp,
   BarChart3,
   PackageSearch,
+  Bell,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/reports", label: "التقارير", icon: BarChart3 },
   { href: "/inventory", label: "المخزون", icon: PackageSearch },
   { href: "/marketing", label: "التسويق", icon: Palette },
+  { href: "/notifications", label: "الإشعارات", icon: Bell },
 ];
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
