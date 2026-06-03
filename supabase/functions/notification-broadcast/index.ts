@@ -12,16 +12,18 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: req.headers.get('Authorization')! } },
+    })
 
-    const { data: profile } = await supabaseClient
+    const { data: { user }, error: userErr } = await authClient.auth.getUser()
+    if (userErr || !user) throw new Error('Unauthorized')
+
+    const { data: profile } = await authClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -35,6 +37,8 @@ serve(async (req) => {
       throw new Error('Title and body are required')
     }
 
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey)
+
     const baseNotification = {
       title: title || '',
       titleAr: titleAr || title || '',
@@ -45,14 +49,17 @@ serve(async (req) => {
     }
 
     if (targetUserId) {
-      await supabaseClient
+      const { error: insertErr } = await adminClient
         .from('notifications')
         .insert({ ...baseNotification, userId: targetUserId })
+      if (insertErr) throw new Error(insertErr.message)
     } else {
-      const { data: users } = await supabaseClient
+      const { data: users, error: usersErr } = await adminClient
         .from('profiles')
         .select('id')
         .eq('role', 'CUSTOMER')
+
+      if (usersErr) throw new Error(usersErr.message)
 
       if (users && users.length > 0) {
         const notifications = users.map(u => ({
@@ -60,9 +67,10 @@ serve(async (req) => {
           userId: u.id,
         }))
 
-        await supabaseClient
+        const { error: insertErr } = await adminClient
           .from('notifications')
           .insert(notifications)
+        if (insertErr) throw new Error(insertErr.message)
       }
     }
 
