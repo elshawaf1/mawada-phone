@@ -32,7 +32,6 @@ interface Product {
   isOnSale: boolean;
   totalStock: number;
   sku: string | null;
-  taxRate: number;
   isActive: boolean;
   isFeatured: boolean;
   createdAt: string;
@@ -47,7 +46,7 @@ interface Category { id: string; name: string; nameAr: string; }
 interface Brand { id: string; name: string; nameAr: string; }
 interface Variant {
   id?: string; color: string | null; colorHex: string | null;
-  storage: string | null; ram: string | null; price: number; stock: number; sku: string | null; batteryHealth: number | null; _isNew?: boolean; _tempId?: string;
+  storage: string | null; ram: string | null; price: number; stock: number; sku: string | null; batteryHealth: number | null; taxRate: number; _isNew?: boolean; _tempId?: string;
 }
 interface Spec {
   id?: string; groupName: string; key: string; value: string; sortOrder: number; _isNew?: boolean;
@@ -78,7 +77,6 @@ export default function Products() {
   const [isOnSale, setIsOnSale] = useState(false);
   const [totalStock, setTotalStock] = useState(0);
   const [sku, setSku] = useState("");
-  const [taxRate, setTaxRate] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [images, setImages] = useState<{ id?: string; url: string; isPrimary: boolean; sortOrder: number; file?: File }[]>([]);
@@ -110,7 +108,7 @@ export default function Products() {
   const resetForm = () => {
     setName(""); setNameAr(""); setDescription(""); setDescriptionAr("");
     setCategoryId(""); setBrandId(""); setBasePrice(0); setSalePrice(null);
-    setIsOnSale(false); setTotalStock(0); setSku(""); setTaxRate(0);
+    setIsOnSale(false); setTotalStock(0); setSku("");
     setIsActive(true); setIsFeatured(false); setImages([]); setVariants([]); setSpecs([]);
     setEditingProduct(null);
   };
@@ -128,7 +126,6 @@ export default function Products() {
     setIsOnSale(product.isOnSale);
     setTotalStock(product.totalStock);
     setSku(product.sku || "");
-    setTaxRate(product.taxRate || 0);
     setIsActive(product.isActive);
     setIsFeatured(product.isFeatured);
     setImages(product.product_images?.map(img => ({ ...img })) || []);
@@ -139,7 +136,7 @@ export default function Products() {
       .order("createdAt");
     setVariants((existingVariants || []).map(v => ({
       id: v.id, color: v.color, colorHex: v.colorHex,
-      storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth,
+      storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth, taxRate: v.taxRate || 0,
     })));
     const { data: existingSpecs } = await supabase
       .from("specifications")
@@ -185,7 +182,7 @@ export default function Products() {
         name, nameAr, slug, description, descriptionAr,
         categoryId: categoryId || null, brandId: brandId || null,
         basePrice, salePrice, isOnSale, totalStock,
-        sku: sku || null, taxRate: taxRate || 0, isActive, isFeatured,
+        sku: sku || null, isActive, isFeatured,
         updatedAt: new Date().toISOString(),
       };
 
@@ -231,7 +228,7 @@ export default function Products() {
       }
       if (variants.length > 0) {
         const { error: varError } = await supabase.from("product_variants").insert(variants.map(v => ({
-          productId, color: v.color, colorHex: v.colorHex, storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth,
+          productId, color: v.color, colorHex: v.colorHex, storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth, taxRate: v.taxRate || 0,
         })));
         if (varError) throw varError;
       }
@@ -299,7 +296,6 @@ export default function Products() {
         isOnSale: product.isOnSale,
         totalStock: 0,
         sku: product.sku ? `${product.sku}-COPY` : null,
-        taxRate: product.taxRate || 0,
         isActive: false,
         isFeatured: false,
         createdAt: new Date().toISOString(),
@@ -330,6 +326,7 @@ export default function Products() {
           stock: 0,
           sku: v.sku ? `${v.sku}-COPY` : null,
           batteryHealth: v.batteryHealth,
+          taxRate: v.taxRate || 0,
           isActive: v.isActive,
         })));
         if (varError) throw varError;
@@ -366,10 +363,24 @@ export default function Products() {
     return matchSearch && matchCategory;
   });
 
-  const addVariant = () => setVariants([...variants, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, _isNew: true, _tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}` }]);
-  const removeVariant = (tempId: string) => setVariants(variants.filter((v) => v._tempId !== tempId && v.id !== tempId));
-  const updateVariant = (tempId: string, key: keyof Variant, value: any) => {
-    setVariants(variants.map((v) => (v._tempId === tempId || v.id === tempId) ? { ...v, [key]: value } : v));
+  const getVariantId = (v: Variant) => v._tempId || v.id;
+  
+  const addVariant = () => setVariants([...variants, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, taxRate: 0, _isNew: true, _tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}` }]);
+  
+  const removeVariant = async (variantId: string) => {
+    const variant = variants.find(v => getVariantId(v) === variantId);
+    if (variant?.id && !variant._isNew) {
+      const { error } = await supabase.from("product_variants").delete().eq("id", variant.id);
+      if (error) {
+        toast({ title: "خطأ", description: error.message, variant: "destructive" });
+        return;
+      }
+    }
+    setVariants(variants.filter((v) => getVariantId(v) !== variantId));
+  };
+  
+  const updateVariant = (variantId: string, key: keyof Variant, value: any) => {
+    setVariants(variants.map((v) => getVariantId(v) === variantId ? { ...v, [key]: value } : v));
   };
   const addSpec = () => setSpecs([...specs, { groupName: "", key: "", value: "", sortOrder: specs.length, _isNew: true }]);
   const removeSpec = (i: number) => setSpecs(specs.filter((_, idx) => idx !== i));
@@ -798,19 +809,10 @@ export default function Products() {
                   <Input type="number" inputMode="numeric" value={totalStock} onChange={(e) => setTotalStock(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">SKU</Label>
                   <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="APL-IP16" className="bg-muted/30 focus:bg-background font-mono" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">نسبة الضريبة % (عرض فقط)</Label>
-                  <Input type="number" inputMode="numeric" min={0} max={100} step={0.5} value={taxRate} onChange={(e) => setTaxRate(e.target.value ? Number(e.target.value) : 0)} placeholder="14" className="bg-muted/30 focus:bg-background font-number" />
-                  <p className="text-xs text-muted-foreground">معلومة للعرض فقط، لا تحتسب في الدفع</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">ضريبة على السعر الأساسي</Label>
-                  <Input type="text" value={basePrice > 0 && taxRate > 0 ? `${((basePrice * taxRate / 100)).toLocaleString("ar-EG")} ج` : "—"} readOnly className="bg-muted/30 focus:bg-background font-number text-emerald-600" />
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-4 pt-6">
@@ -905,64 +907,74 @@ export default function Products() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {variants.map((v, i) => (
-                    <div key={i} className="bg-muted/20 rounded-xl p-4 border border-border/40 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-primary">بديل {i + 1}</span>
-                          {v.colorHex && <span className="w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: v.colorHex }} title={v.color || ""} />}
-                          {v.storage && <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-mono">{v.storage}</Badge>}
-                          {v.ram && <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-mono">{v.ram}</Badge>}
+                  {variants.map((v, i) => {
+                    const variantId = v._tempId || v.id || `idx_${i}`;
+                    return (
+                      <div key={variantId} className="bg-muted/20 rounded-xl p-4 border border-border/40 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-primary">بديل {i + 1}</span>
+                            {v.colorHex && <span className="w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: v.colorHex }} title={v.color || ""} />}
+                            {v.storage && <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-mono">{v.storage}</Badge>}
+                            {v.ram && <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-mono">{v.ram}</Badge>}
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => removeVariant(variantId)} className="h-7 w-7 hover:bg-red-50 hover:text-red-500">
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => removeVariant(i)} className="h-7 w-7 hover:bg-red-50 hover:text-red-500">
-                          <X className="w-3.5 h-3.5" />
-                        </Button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">اللون</Label>
+                            <Input placeholder="مثال: أسود تيتانيوم" value={v.color || ""} onChange={(e) => updateVariant(variantId, "color", e.target.value)} className="bg-white/50 font-number" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">كود اللون (Hex)</Label>
+                            <Input placeholder="#000000" value={v.colorHex || ""} onChange={(e) => updateVariant(variantId, "colorHex", e.target.value)} className="bg-white/50 font-mono" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">السعة التخزينية</Label>
+                            <Input placeholder="مثال: 256GB" value={v.storage || ""} onChange={(e) => updateVariant(variantId, "storage", e.target.value)} className="bg-white/50 font-number" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">RAM</Label>
+                            <Input placeholder="مثال: 8GB" value={v.ram || ""} onChange={(e) => updateVariant(variantId, "ram", e.target.value)} className="bg-white/50" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground font-semibold text-primary">السعر (مطلوب) *</Label>
+                            <Input type="number" inputMode="numeric" placeholder="سعر هذا البديل" value={v.price} onChange={(e) => updateVariant(variantId, "price", Number(e.target.value))} className="bg-white/50 font-number font-semibold" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">المخزون</Label>
+                            <Input type="number" inputMode="numeric" placeholder="الكمية المتاحة" value={v.stock} onChange={(e) => updateVariant(variantId, "stock", Number(e.target.value))} className="bg-white/50 font-number" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">SKU (اختياري)</Label>
+                            <Input placeholder="APL-IP16-256-BLK" value={v.sku || ""} onChange={(e) => updateVariant(variantId, "sku", e.target.value)} className="bg-white/50 font-mono text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                              <span className="relative" title="نسبة صحة البطارية للأجهزة المجددة (0-100%)">
+                                <span>🔋</span>
+                              </span>
+                              بطارية %
+                            </Label>
+                            <Input type="number" inputMode="numeric" min={0} max={100} placeholder="100" value={v.batteryHealth ?? ""} onChange={(e) => updateVariant(variantId, "batteryHealth", e.target.value ? Number(e.target.value) : null)} className="bg-white/50 font-number w-24" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">ضريبة %</Label>
+                            <div className="relative">
+                              <Input type="number" inputMode="numeric" min={0} max={100} step={0.5} placeholder="14" value={v.taxRate ?? 0} onChange={(e) => updateVariant(variantId, "taxRate", e.target.value ? Number(e.target.value) : 0)} className="bg-white/50 font-number w-24 pr-8" />
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">%</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="pt-2 border-t border-border/40 flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>السعر الأساسي للمنتج: <span className="font-number font-medium text-primary">{basePrice.toLocaleString("ar-EG")} ج</span></span>
+                          <span>فرق السعر: <span className="font-number font-medium" style={{ color: v.price > basePrice ? 'red' : v.price < basePrice ? 'green' : 'inherit' }}>{(v.price - basePrice).toLocaleString("ar-EG")} ج</span></span>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">اللون</Label>
-                          <Input placeholder="مثال: أسود تيتانيوم" value={v.color || ""} onChange={(e) => updateVariant(i, "color", e.target.value)} className="bg-white/50 font-number" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">كود اللون (Hex)</Label>
-                          <Input placeholder="#000000" value={v.colorHex || ""} onChange={(e) => updateVariant(i, "colorHex", e.target.value)} className="bg-white/50 font-mono" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">السعة التخزينية</Label>
-                          <Input placeholder="مثال: 256GB" value={v.storage || ""} onChange={(e) => updateVariant(i, "storage", e.target.value)} className="bg-white/50 font-number" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">RAM</Label>
-                          <Input placeholder="مثال: 8GB" value={v.ram || ""} onChange={(e) => updateVariant(i, "ram", e.target.value)} className="bg-white/50" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground font-semibold text-primary">السعر (مطلوب) *</Label>
-                          <Input type="number" inputMode="numeric" placeholder="سعر هذا البديل" value={v.price} onChange={(e) => updateVariant(i, "price", Number(e.target.value))} className="bg-white/50 font-number font-semibold" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">المخزون</Label>
-                          <Input type="number" inputMode="numeric" placeholder="الكمية المتاحة" value={v.stock} onChange={(e) => updateVariant(i, "stock", Number(e.target.value))} className="bg-white/50 font-number" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">SKU (اختياري)</Label>
-                          <Input placeholder="APL-IP16-256-BLK" value={v.sku || ""} onChange={(e) => updateVariant(i, "sku", e.target.value)} className="bg-white/50 font-mono text-xs" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                            <span className="relative" title="نسبة صحة البطارية للأجهزة المجددة (0-100%)">
-                              <span>🔋</span>
-                            </span>
-                            بطارية %
-                          </Label>
-                          <Input type="number" inputMode="numeric" min={0} max={100} placeholder="100" value={v.batteryHealth ?? ""} onChange={(e) => updateVariant(i, "batteryHealth", e.target.value ? Number(e.target.value) : null)} className="bg-white/50 font-number w-24" />
-                        </div>
-                      </div>
-                      <div className="pt-2 border-t border-border/40 flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>السعر الأساسي للمنتج: <span className="font-number font-medium text-primary">{basePrice.toLocaleString("ar-EG")} ج</span></span>
-                        <span>فرق السعر: <span className="font-number font-medium" style={{ color: v.price > basePrice ? 'red' : v.price < basePrice ? 'green' : 'inherit' }}>{(v.price - basePrice).toLocaleString("ar-EG")} ج</span></span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
