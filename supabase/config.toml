@@ -1,3 +1,6 @@
+[functions.auth-redirect]
+verify_jwt = false
+
 [functions.paymob-intent]
 verify_jwt = true
 
