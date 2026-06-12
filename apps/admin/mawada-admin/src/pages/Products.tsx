@@ -34,6 +34,9 @@ interface Product {
   sku: string | null;
   isActive: boolean;
   isFeatured: boolean;
+  usePriceRange: boolean;
+  minPrice: number | null;
+  maxPrice: number | null;
   createdAt: string;
   categories?: { name: string; nameAr: string } | { name: string; nameAr: string }[] | null;
   brands?: { name: string; nameAr: string } | { name: string; nameAr: string }[] | null;
@@ -75,6 +78,9 @@ export default function Products() {
   const [basePrice, setBasePrice] = useState(0);
   const [salePrice, setSalePrice] = useState<number | null>(null);
   const [isOnSale, setIsOnSale] = useState(false);
+  const [usePriceRange, setUsePriceRange] = useState(false);
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(0);
   const [totalStock, setTotalStock] = useState(0);
   const [sku, setSku] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -108,7 +114,8 @@ export default function Products() {
   const resetForm = () => {
     setName(""); setNameAr(""); setDescription(""); setDescriptionAr("");
     setCategoryId(""); setBrandId(""); setBasePrice(0); setSalePrice(null);
-    setIsOnSale(false); setTotalStock(0); setSku("");
+    setIsOnSale(false); setUsePriceRange(false); setMinPrice(0); setMaxPrice(0);
+    setTotalStock(0); setSku("");
     setIsActive(true); setIsFeatured(false); setImages([]); setVariants([]); setSpecs([]);
     setEditingProduct(null);
   };
@@ -124,6 +131,9 @@ export default function Products() {
     setBasePrice(product.basePrice);
     setSalePrice(product.salePrice);
     setIsOnSale(product.isOnSale);
+    setUsePriceRange(product.usePriceRange || false);
+    setMinPrice(product.minPrice || 0);
+    setMaxPrice(product.maxPrice || 0);
     setTotalStock(product.totalStock);
     setSku(product.sku || "");
     setIsActive(product.isActive);
@@ -150,9 +160,20 @@ export default function Products() {
   };
 
   const saveProduct = async () => {
-    if (!nameAr || basePrice <= 0) {
-      toast({ title: "خطأ", description: "اسم المنتج بالعربية والسعر مطلوبان", variant: "destructive" });
+    if (!nameAr) {
+      toast({ title: "خطأ", description: "اسم المنتج بالعربية مطلوب", variant: "destructive" });
       return;
+    }
+    if (usePriceRange) {
+      if (minPrice <= 0 || maxPrice <= 0 || minPrice > maxPrice) {
+        toast({ title: "خطأ", description: "الحد الأدنى والأقصى للسعر يجب أن يكونا صحيحيْن والحد الأدنى أقل من الأقصى", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (basePrice <= 0) {
+        toast({ title: "خطأ", description: "السعر الأساسي مطلوب", variant: "destructive" });
+        return;
+      }
     }
     setSaving(true);
     const uploadedFileNames: string[] = [];
@@ -181,7 +202,13 @@ export default function Products() {
       const productData = {
         name, nameAr, slug, description, descriptionAr,
         categoryId: categoryId || null, brandId: brandId || null,
-        basePrice, salePrice, isOnSale, totalStock,
+        basePrice: usePriceRange ? 0 : basePrice,
+        salePrice: usePriceRange ? null : salePrice,
+        isOnSale: usePriceRange ? false : isOnSale,
+        usePriceRange,
+        minPrice: usePriceRange ? minPrice : null,
+        maxPrice: usePriceRange ? maxPrice : null,
+        totalStock,
         sku: sku || null, isActive, isFeatured,
         updatedAt: new Date().toISOString(),
       };
@@ -294,6 +321,9 @@ export default function Products() {
         basePrice: product.basePrice,
         salePrice: product.salePrice,
         isOnSale: product.isOnSale,
+        usePriceRange: product.usePriceRange || false,
+        minPrice: product.minPrice || null,
+        maxPrice: product.maxPrice || null,
         totalStock: 0,
         sku: product.sku ? `${product.sku}-COPY` : null,
         isActive: false,
@@ -565,13 +595,21 @@ export default function Products() {
                         </TableCell>
                         <TableCell className="py-3">
                           <div className="flex items-center gap-1.5">
-                            <span className={cn("font-number font-semibold text-sm", product.isOnSale ? "text-red-500 line-through" : "")}>
-                              {product.basePrice.toLocaleString("ar-EG")}
-                            </span>
-                            {product.isOnSale && product.salePrice && (
-                              <span className="font-number font-bold text-sm text-emerald-600">
-                                {product.salePrice.toLocaleString("ar-EG")}
+                            {product.usePriceRange ? (
+                              <span className="font-number font-semibold text-sm">
+                                {(product.minPrice || 0).toLocaleString("ar-EG")} - {(product.maxPrice || 0).toLocaleString("ar-EG")}
                               </span>
+                            ) : (
+                              <>
+                                <span className={cn("font-number font-semibold text-sm", product.isOnSale ? "text-red-500 line-through" : "")}>
+                                  {product.basePrice.toLocaleString("ar-EG")}
+                                </span>
+                                {product.isOnSale && product.salePrice && (
+                                  <span className="font-number font-bold text-sm text-emerald-600">
+                                    {product.salePrice.toLocaleString("ar-EG")}
+                                  </span>
+                                )}
+                              </>
                             )}
                             <span className="text-xs text-muted-foreground/60">ج</span>
                           </div>
@@ -699,13 +737,21 @@ export default function Products() {
                         {catName(product.categories) || "-"}
                       </Badge>
                       <div className="flex items-center gap-1.5">
-                        <span className={cn("font-number text-sm", product.isOnSale ? "text-red-500 line-through" : "font-semibold")}>
-                          {product.basePrice.toLocaleString("ar-EG")}
-                        </span>
-                        {product.isOnSale && product.salePrice && (
-                          <span className="font-number font-bold text-sm text-emerald-600">
-                            {product.salePrice.toLocaleString("ar-EG")}
+                        {product.usePriceRange ? (
+                          <span className="font-number text-sm font-semibold">
+                            {(product.minPrice || 0).toLocaleString("ar-EG")} - {(product.maxPrice || 0).toLocaleString("ar-EG")}
                           </span>
+                        ) : (
+                          <>
+                            <span className={cn("font-number text-sm", product.isOnSale ? "text-red-500 line-through" : "font-semibold")}>
+                              {product.basePrice.toLocaleString("ar-EG")}
+                            </span>
+                            {product.isOnSale && product.salePrice && (
+                              <span className="font-number font-bold text-sm text-emerald-600">
+                                {product.salePrice.toLocaleString("ar-EG")}
+                              </span>
+                            )}
+                          </>
                         )}
                         <span className="text-xs text-muted-foreground/60">ج</span>
                       </div>
@@ -795,30 +841,14 @@ export default function Products() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">السعر الأساسي *</Label>
-                  <Input type="number" inputMode="numeric" value={basePrice} onChange={(e) => setBasePrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">سعر البيع</Label>
-                  <Input type="number" inputMode="numeric" value={salePrice ?? ""} onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : null)} className="bg-muted/30 focus:bg-background font-number" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">المخزون</Label>
-                  <Input type="number" inputMode="numeric" value={totalStock} onChange={(e) => setTotalStock(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">SKU</Label>
-                  <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="APL-IP16" className="bg-muted/30 focus:bg-background font-mono" />
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 pt-6">
+              <div className="flex flex-wrap items-center gap-4 pt-2">
                   <div className="flex items-center gap-2">
-                    <Switch checked={isOnSale} onCheckedChange={setIsOnSale} id="onSale" />
-                    <Label htmlFor="onSale" className="text-sm cursor-pointer">عرض</Label>
+                    <Switch checked={usePriceRange} onCheckedChange={setUsePriceRange} id="usePriceRange" />
+                    <Label htmlFor="usePriceRange" className="text-sm cursor-pointer">نطاق سعري (حد أدنى - أقصى)</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={isOnSale} onCheckedChange={setIsOnSale} id="onSale" disabled={usePriceRange} />
+                    <Label htmlFor="onSale" className={cn("text-sm cursor-pointer", usePriceRange && "opacity-40")}>عرض</Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch checked={isActive} onCheckedChange={setIsActive} id="isActive" />
@@ -829,6 +859,43 @@ export default function Products() {
                     <Label htmlFor="isFeatured" className="text-sm cursor-pointer">مميز</Label>
                   </div>
                 </div>
+              {usePriceRange ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">الحد الأدنى للسعر *</Label>
+                    <Input type="number" inputMode="numeric" value={minPrice || ""} onChange={(e) => setMinPrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">الحد الأقصى للسعر *</Label>
+                    <Input type="number" inputMode="numeric" value={maxPrice || ""} onChange={(e) => setMaxPrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">المخزون</Label>
+                    <Input type="number" inputMode="numeric" value={totalStock} onChange={(e) => setTotalStock(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">السعر الأساسي *</Label>
+                    <Input type="number" inputMode="numeric" value={basePrice} onChange={(e) => setBasePrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">سعر البيع</Label>
+                    <Input type="number" inputMode="numeric" value={salePrice ?? ""} onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : null)} className="bg-muted/30 focus:bg-background font-number" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">المخزون</Label>
+                    <Input type="number" inputMode="numeric" value={totalStock} onChange={(e) => setTotalStock(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">SKU</Label>
+                  <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="APL-IP16" className="bg-muted/30 focus:bg-background font-mono" />
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="images" className="space-y-4 mt-4">
