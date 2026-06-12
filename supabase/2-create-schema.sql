@@ -126,6 +126,7 @@ CREATE TABLE public.product_variants (
   price numeric NOT NULL DEFAULT 0,
   stock integer DEFAULT 0,
   sku text,
+  "batteryHealth" integer,
   "isActive" boolean DEFAULT true,
   "createdAt" timestamp DEFAULT CURRENT_TIMESTAMP
 );

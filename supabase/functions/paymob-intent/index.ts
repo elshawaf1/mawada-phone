@@ -5,8 +5,6 @@ const PAYMOB_SECRET_KEY = Deno.env.get('PAYMOB_SECRET_KEY')!
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -18,8 +16,11 @@ function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-function generateOrderNumber(): string {
-  return 'MW-' + Math.floor(100000 + Math.random() * 900000)
+function fail(error: string, status = 400) {
+  return new Response(JSON.stringify({ error }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status,
+  })
 }
 
 serve(async (req) => {
@@ -28,9 +29,22 @@ serve(async (req) => {
   }
 
   try {
+    // --- JWT Verification (C2) ---
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.replace('Bearer ', '')
+    if (!token) {
+      return fail('Unauthorized - no token provided', 401)
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return fail('Unauthorized - invalid token', 401)
+    }
+
+    // --- Input Validation & Parsing ---
     const body = await req.json()
     const {
-      amountCents,
       paymentMethod,
       paymentMethodIds,
       cartItems,
@@ -38,88 +52,242 @@ serve(async (req) => {
       userFirstName,
       userLastName,
       userPhone,
-      subtotal,
-      shippingCost,
-      discount,
-      total,
       couponCode,
-      userId,
       addressId,
       branchId,
       deliveryType,
+      notes,
+      existingOrderId,
+      existingOrderNumber,
+      idempotencyKey,
     } = body
 
-    console.log('[EDGE] received cartItems:', JSON.stringify(cartItems))
-    console.log('[EDGE] amountCents from client:', amountCents)
+    const userId = user.id
 
-    if (!userId) {
-      throw new Error('userId is required')
-    }
-
-    const orderId = generateId('ord')
-    const orderNumber = generateOrderNumber()
-
-    const { data: order, error: dbErr } = await supabase
-      .from('orders')
-      .insert({
-        id: orderId,
-        orderNumber,
-        userId,
-        status: 'PENDING',
-        paymentMethod: paymentMethod || 'VISA',
-        paymentStatus: paymentMethod === 'COD' ? 'UNPAID' : 'PENDING',
-        subtotal: subtotal || 0,
-        shippingCost: shippingCost || 0,
-        discount: discount || 0,
-        total: total || (amountCents ? amountCents / 100 : 0),
-        couponCode: couponCode || null,
-        addressId: deliveryType === 'delivery' ? (addressId || null) : null,
-        branchId: deliveryType === 'branch' ? (branchId || null) : null,
-      })
-      .select()
-      .single()
-
-    if (dbErr) throw new Error(dbErr.message)
-
-    if (cartItems?.length > 0) {
-      const orderItems = cartItems.map((item: { productId?: string; variantId?: string; quantity: number; unitPrice: number }) => ({
-        id: generateId('oi'),
-        orderId: order.id,
-        productId: item.productId || null,
-        variantId: item.variantId || null,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-      }))
-      const { error: oiErr } = await supabase.from('order_items').insert(orderItems)
-      if (oiErr) {
-        console.error('order_items insert error:', oiErr.message)
+    // --- Idempotency Check ---
+    if (idempotencyKey) {
+      const { data: existingKey } = await supabase
+        .from('payment_idempotency_keys')
+        .select('"orderId"')
+        .eq('key', idempotencyKey)
+        .maybeSingle()
+      if (existingKey) {
+        return new Response(JSON.stringify({
+          orderId: existingKey.orderId,
+          status: 'duplicate',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409,
+        })
       }
     }
 
-    if (paymentMethod === 'COD') {
-      return new Response(JSON.stringify({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        paymentMethod: 'COD',
-        paymentStatus: 'UNPAID',
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
+    if (!paymentMethod || !['VISA', 'WALLET', 'COD'].includes(paymentMethod)) {
+      return fail('Invalid payment method')
     }
 
-    const methods = paymentMethodIds?.length > 0
-      ? paymentMethodIds
-      : []
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      return fail('Cart must contain at least one item')
+    }
+    for (const item of cartItems) {
+      if (!item.productId || typeof item.quantity !== 'number' || item.quantity < 1) {
+        return fail('Each cart item must have a valid productId and quantity >= 1')
+      }
+    }
 
-    const subtotalCents = (cartItems || []).reduce(
-      (sum: number, item: { unitPrice: number; quantity: number }) =>
-        sum + Math.round(item.unitPrice * 100) * item.quantity,
-      0
-    )
-    const shippingCents = Math.round((shippingCost || 0) * 100)
-    const discountCents = Math.round((discount || 0) * 100)
-    const totalCents = subtotalCents + shippingCents - discountCents
+    let order: any
+    let orderItemsForPaymob: Array<{ name: string; unitPrice: number; quantity: number }> = []
+
+    // --- Handle existing order (resume payment) ---
+    let existing: any = null
+    if (existingOrderNumber) {
+      const res = await supabase
+        .from('orders')
+        .select('id, orderNumber, userId, status, paymentStatus, subtotal, shippingCost, discount, total, couponCode')
+        .eq('orderNumber', existingOrderNumber)
+        .eq('userId', userId)
+        .order('createdAt', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (res.error) console.error('Order lookup error:', res.error.message)
+      existing = res.data
+    } else if (existingOrderId) {
+      const res = await supabase
+        .from('orders')
+        .select('id, orderNumber, userId, status, paymentStatus, subtotal, shippingCost, discount, total, couponCode')
+        .eq('id', existingOrderId)
+        .maybeSingle()
+      if (res.error) console.error('Order lookup error:', res.error.message)
+      existing = res.data
+    }
+
+    if (existing) {
+      if (existing.userId !== userId) {
+        return fail('Forbidden', 403)
+      }
+      if (existing.status !== 'PENDING') {
+        return fail('Order is no longer payable')
+      }
+      if (!['PENDING', 'FAILED'].includes(existing.paymentStatus)) {
+        return fail(`Order is already ${existing.paymentStatus}`)
+      }
+      order = existing
+
+      if (paymentMethod === 'COD') {
+        const { error: updateErr } = await supabase
+          .from('orders')
+          .update({ paymentMethod: 'COD', paymentStatus: 'UNPAID' })
+          .eq('id', order.id)
+        if (updateErr) throw new Error('Failed to update order')
+        return new Response(JSON.stringify({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          paymentMethod: 'COD',
+          paymentStatus: 'UNPAID',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+      }
+
+      const { data: oi, error: oiErr } = await supabase
+        .from('order_items')
+        .select('quantity, unitPrice, products(nameAr, name)')
+        .eq('orderId', existing.id)
+
+      if (oiErr) {
+        console.error('order_items fetch error:', oiErr.message)
+      } else {
+        orderItemsForPaymob = (oi || []).map((it: any) => ({
+          name: it.products?.nameAr || it.products?.name || 'Product',
+          unitPrice: Number(it.unitPrice),
+          quantity: it.quantity,
+        }))
+      }
+    } else {
+      // --- Server-side price calculation (C1) ---
+      const productIds = cartItems.map((item: { productId: string }) => item.productId)
+      const { data: products, error: prodErr } = await supabase
+        .from('products')
+        .select('id, basePrice, nameAr, name, totalStock')
+        .in('id', productIds)
+
+      if (prodErr || !products || products.length === 0) {
+        return fail('Could not verify product prices')
+      }
+
+      const productMap = new Map(products.map((p: any) => [p.id, p]))
+
+      let subtotal = 0
+      for (const item of cartItems) {
+        const product = productMap.get(item.productId)
+        if (!product) {
+          return fail(`Product ${item.productId} not found`)
+        }
+        if (product.totalStock < item.quantity) {
+          return fail(`Insufficient stock for ${product.nameAr || product.name}`)
+        }
+        subtotal += product.basePrice * item.quantity
+      }
+
+      let discount = 0
+      if (couponCode) {
+        const { data: coupon } = await supabase
+          .from('coupons')
+          .select('"discountPercent", "maxUses", "currentUses", "minOrderAmount", "expiresAt", "isActive"')
+          .eq('code', couponCode.toUpperCase())
+          .maybeSingle()
+
+        if (coupon && coupon.isActive) {
+          if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+            discount = 0
+          } else if (coupon.maxUses > 0 && coupon.currentUses >= coupon.maxUses) {
+            discount = 0
+          } else if (subtotal < (coupon.minOrderAmount || 0)) {
+            discount = 0
+          } else {
+            discount = Math.round(subtotal * (coupon.discountPercent / 100))
+          }
+        }
+      }
+
+      const freeShipping = subtotal > 50000
+      const shippingCost = deliveryType === 'branch' ? 0 : (freeShipping ? 0 : 90)
+      const total = subtotal - discount + shippingCost
+
+      const orderId = generateId('ord')
+
+      const { data: created, error: dbErr } = await supabase
+        .from('orders')
+        .insert({
+          id: orderId,
+          userId,
+          status: 'PENDING',
+          paymentMethod: paymentMethod || 'VISA',
+          paymentStatus: paymentMethod === 'COD' ? 'UNPAID' : 'PENDING',
+          subtotal,
+          shippingCost,
+          discount,
+          total,
+          couponCode: couponCode || null,
+          notes: notes || null,
+          addressId: deliveryType === 'delivery' ? (addressId || null) : null,
+          branchId: deliveryType === 'branch' ? (branchId || null) : null,
+        })
+        .select()
+        .single()
+
+      if (dbErr) throw new Error('Failed to create order')
+      order = created
+
+      if (idempotencyKey) {
+        const { error: ikErr } = await supabase
+          .from('payment_idempotency_keys')
+          .insert({ key: idempotencyKey, orderId: order.id, userId })
+        if (ikErr) console.error('idempotency key insert error:', ikErr.message)
+      }
+
+      if (cartItems?.length > 0) {
+        const orderItems = cartItems.map((item: { productId?: string; variantId?: string; quantity: number }) => ({
+          id: generateId('oi'),
+          orderId: order.id,
+          productId: item.productId || null,
+          variantId: item.variantId || null,
+          quantity: item.quantity,
+          unitPrice: productMap.get(item.productId)?.basePrice || 0,
+        }))
+        const { error: oiErr } = await supabase.from('order_items').insert(orderItems)
+        if (oiErr) {
+          console.error('order_items insert error:', oiErr.message)
+        }
+
+        orderItemsForPaymob = cartItems.map((item: { productId: string; quantity: number }) => {
+          const p = productMap.get(item.productId)
+          return {
+            name: p?.nameAr || p?.name || 'Product',
+            unitPrice: Number(p?.basePrice || 0),
+            quantity: item.quantity,
+          }
+        })
+      }
+
+      if (paymentMethod === 'COD') {
+        return new Response(JSON.stringify({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          paymentMethod: 'COD',
+          paymentStatus: 'UNPAID',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+      }
+    }
+
+    const methods = paymentMethodIds?.length > 0 ? paymentMethodIds : []
+    const shippingCents = Math.round(Number(order.shippingCost || 0) * 100)
+    const discountCents = Math.round(Number(order.discount || 0) * 100)
+    const totalCents = Math.round(Number(order.total) * 100)
 
     let paymentItems: Array<{ name: string; amount: number; description: string; quantity: number }>
     let paymobAmount: number
@@ -133,10 +301,10 @@ serve(async (req) => {
       }]
       paymobAmount = totalCents
     } else {
-      paymentItems = (cartItems || []).map((item: { name?: string; unitPrice: number; quantity: number }) => ({
-        name: item.name || 'Product',
+      paymentItems = orderItemsForPaymob.map((item) => ({
+        name: item.name,
         amount: Math.round(item.unitPrice * 100),
-        description: item.name || 'Product',
+        description: item.name,
         quantity: item.quantity,
       }))
       if (shippingCents > 0) {
@@ -149,9 +317,6 @@ serve(async (req) => {
       }
       paymobAmount = paymentItems.reduce((s, i) => s + i.amount * i.quantity, 0)
     }
-
-    console.log('[EDGE] subtotalCents:', subtotalCents, 'shippingCents:', shippingCents, 'discountCents:', discountCents, 'totalCents:', totalCents)
-    console.log('[EDGE] paymobAmount:', paymobAmount, 'paymentItems:', JSON.stringify(paymentItems))
 
     const paymobPayload: Record<string, unknown> = {
       amount: paymobAmount,
@@ -189,36 +354,21 @@ serve(async (req) => {
     const data = await response.json()
 
     if (!response.ok) {
-      const detail = data.detail || data.message || JSON.stringify(data)
-      throw new Error(`Paymob API error (${response.status}): ${detail}`)
+      console.error('Paymob API error:', response.status, JSON.stringify(data))
+      throw new Error('Payment provider error')
     }
-
-    const paymobOrderId = String(data.intention_order_id)
-
-    const updateFields: Record<string, unknown> = { paymobOrderId }
-
-    if (data.payment_keys?.[0]?.key) {
-      updateFields.fawryCode = data.payment_keys[0].key
-    }
-
-    await supabase
-      .from('orders')
-      .update(updateFields)
-      .eq('id', order.id)
 
     return new Response(JSON.stringify({
       clientSecret: data.client_secret,
       orderId: order.id,
       orderNumber: order.orderNumber,
-      paymobOrderId,
-      fawryCode: data.payment_keys?.[0]?.key || null,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
     console.error('paymob-intent error:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

@@ -1,5 +1,8 @@
 [functions.paymob-intent]
-verify_jwt = false
+verify_jwt = true
 
 [functions.paymob-webhook]
 verify_jwt = false
+
+[functions.notification-broadcast]
+verify_jwt = true

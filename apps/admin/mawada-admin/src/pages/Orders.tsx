@@ -66,8 +66,6 @@ const statusColors: Record<string, string> = {
 
 const paymentMethodLabels: Record<string, string> = {
   VISA: "فيزا",
-  FAWRY: "فوري",
-  INSTAPAY: "انستا باي",
   WALLET: "محفظة",
   COD: "عند الاستلام",
 };
@@ -90,9 +88,7 @@ const paymentStatusColors: Record<string, string> = {
 
 const paymentMethodOptions = [
   { value: "COD", label: "عند الاستلام" },
-  { value: "FAWRY", label: "فوري" },
   { value: "VISA", label: "فيزا" },
-  { value: "INSTAPAY", label: "انستا باي" },
   { value: "WALLET", label: "محفظة" },
   { value: "BRANCH", label: "الفرع" },
 ];
@@ -103,6 +99,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("ALL");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [updating, setUpdating] = useState(false);
@@ -110,6 +107,22 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders();
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-orders-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchOrders = async () => {
@@ -204,7 +217,8 @@ export default function Orders() {
     const matchSearch = o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
       o.profiles?.name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "ALL" || o.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchPaymentStatus = paymentStatusFilter === "ALL" || o.paymentStatus === paymentStatusFilter;
+    return matchSearch && matchStatus && matchPaymentStatus;
   });
 
   if (loading) {
@@ -222,8 +236,8 @@ export default function Orders() {
         <p className="text-muted-foreground mt-1">{orders.length} طلب</p>
       </div>
 
-      <div className="flex gap-3">
-        <div className="relative flex-1">
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث برقم الطلب أو اسم العميل..." className="pr-10 bg-muted/50 border-border/60 focus:bg-background" />
         </div>
@@ -234,6 +248,17 @@ export default function Orders() {
           <SelectContent>
             <SelectItem value="ALL">جميع الحالات</SelectItem>
             {Object.entries(statusLabels).map(([key, label]) => (
+              <SelectItem key={key} value={key}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="حالة الدفع" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">جميع حالات الدفع</SelectItem>
+            {Object.entries(paymentStatusLabels).map(([key, label]) => (
               <SelectItem key={key} value={key}>{label}</SelectItem>
             ))}
           </SelectContent>
@@ -457,11 +482,6 @@ export default function Orders() {
                       {selectedOrder.paymobOrderId && (
                         <p className="text-xs text-muted-foreground">
                           <span className="font-medium">Paymob Order ID:</span> {selectedOrder.paymobOrderId}
-                        </p>
-                      )}
-                      {selectedOrder.fawryCode && (
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-medium">كود فوري:</span> {selectedOrder.fawryCode}
                         </p>
                       )}
                     </div>

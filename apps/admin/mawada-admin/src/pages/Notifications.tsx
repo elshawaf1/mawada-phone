@@ -38,6 +38,7 @@ interface BroadcastItem {
   sentBy: string;
   createdAt: string;
   recipientCount: number;
+  ids: string[];
 }
 
 interface Profile {
@@ -59,6 +60,7 @@ export default function Notifications() {
   const [bodyAr, setBodyAr] = useState("");
   const [notifType, setNotifType] = useState("info");
   const [targetType, setTargetType] = useState("all");
+  const [orderId, setOrderId] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
@@ -75,23 +77,27 @@ export default function Notifications() {
     try {
       const { data, error } = await supabase
         .from("notifications")
-        .select("title, titleAr, body, bodyAr, type, sentBy, createdAt")
+        .select("id, title, titleAr, body, bodyAr, type, sentBy, createdAt")
         .not("sentBy", "is", null)
         .order("createdAt", { ascending: false });
 
       if (error) throw error;
 
-      const grouped: Record<string, BroadcastItem> = {};
+      const grouped: Record<string, { item: BroadcastItem; ids: string[] }> = {};
       (data || []).forEach((n: any) => {
         const key = `${n.title}|${n.body}|${n.type}|${n.createdAt}`;
         if (grouped[key]) {
-          grouped[key].recipientCount += 1;
+          grouped[key].item.recipientCount += 1;
+          grouped[key].ids.push(n.id);
         } else {
-          grouped[key] = { ...n, recipientCount: 1 };
+          grouped[key] = {
+            item: { ...n, recipientCount: 1, ids: [] },
+            ids: [n.id],
+          };
         }
       });
 
-      setBroadcasts(Object.values(grouped));
+      setBroadcasts(Object.values(grouped).map((g) => ({ ...g.item, ids: g.ids })));
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally {
@@ -136,6 +142,7 @@ export default function Notifications() {
     setBodyAr("");
     setNotifType("info");
     setTargetType("all");
+    setOrderId("");
     setSearchQuery("");
     setSelectedUser(null);
     setSearchResults([]);
@@ -157,18 +164,20 @@ export default function Notifications() {
 
     setSending(true);
     try {
-      const { error } = await supabase.functions.invoke("notification-broadcast", {
+      const { data, error: invokeError } = await supabase.functions.invoke("notification-broadcast", {
         body: {
           title: title || titleAr,
           titleAr: titleAr || title,
           body: body || bodyAr,
           bodyAr: bodyAr || body,
           type: notifType,
+          orderId: orderId.trim() || null,
           targetUserId: targetType === "specific" ? selectedUser!.id : null,
         },
       });
 
-      if (error) throw error;
+      if (invokeError) throw invokeError;
+      if (data?.error) throw new Error(data.error);
 
       toast({ title: "تم", description: "تم إرسال الإشعار بنجاح" });
       setShowForm(false);
@@ -183,13 +192,12 @@ export default function Notifications() {
 
   const deleteBroadcast = async (item: BroadcastItem) => {
     try {
+      if (!item.ids || item.ids.length === 0) return;
+
       const { error } = await supabase
         .from("notifications")
         .delete()
-        .eq("sentBy", item.sentBy)
-        .eq("title", item.title)
-        .eq("body", item.body)
-        .eq("type", item.type);
+        .in("id", item.ids);
 
       if (error) throw error;
 
@@ -346,6 +354,17 @@ export default function Notifications() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>ربط بطلب (اختياري)</Label>
+              <Input
+                value={orderId}
+                onChange={(e) => setOrderId(e.target.value)}
+                placeholder="مثال: or-AB12CD3"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground">عند الضغط على الإشعار سيتم فتح تفاصيل هذا الطلب</p>
             </div>
 
             <div className="space-y-3">

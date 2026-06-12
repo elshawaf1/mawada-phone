@@ -9,7 +9,7 @@ import { SkeletonChart } from "@/components/ui/skeleton";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 const paymentMethodLabels: Record<string, string> = {
-  VISA: "فيزا", FAWRY: "فوري", INSTAPAY: "انستا باي", WALLET: "محفظة", COD: "عند الاستلام", BRANCH: "الفرع",
+  VISA: "فيزا", WALLET: "محفظة", COD: "عند الاستلام", BRANCH: "الفرع",
 };
 
 const DONUT_COLORS = ["#0055FF", "#10B981", "#8B5CF6", "#F59E0B", "#6B7280", "#EF4444"];

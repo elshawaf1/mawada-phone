@@ -164,52 +164,52 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           {navItems.map(({ href, label, icon: Icon }, idx) => {
             const isActive = location === href;
             return (
-              <Link key={href} href={href}>
-                <a
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden min-h-[44px]",
-                    isActive
-                      ? "text-white"
-                      : "text-white/35 hover:text-white/70"
-                  )}
-                  style={{
-                    animation: open && mounted
-                      ? `navSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 0.035}s both`
-                      : "none",
-                  }}
-                >
-                  {/* Active glow background */}
-                  <div className={cn(
-                    "absolute inset-0 rounded-xl transition-all duration-300",
-                    isActive
-                      ? "bg-gradient-to-l from-blue-500/[0.12] via-blue-500/[0.04] to-transparent opacity-100 shadow-[inset_0_1px_0_rgba(59,130,246,0.1)]"
-                      : "bg-gradient-to-l from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100"
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden min-h-[44px]",
+                  isActive
+                    ? "text-white"
+                    : "text-white/35 hover:text-white/70"
+                )}
+                style={{
+                  animation: open && mounted
+                    ? `navSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 0.035}s both`
+                    : "none",
+                }}
+              >
+                {/* Active glow background */}
+                <div className={cn(
+                  "absolute inset-0 rounded-xl transition-all duration-300",
+                  isActive
+                    ? "bg-gradient-to-l from-blue-500/[0.12] via-blue-500/[0.04] to-transparent opacity-100 shadow-[inset_0_1px_0_rgba(59,130,246,0.1)]"
+                    : "bg-gradient-to-l from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100"
+                )} />
+
+                {/* Active accent line */}
+                {isActive && (
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gradient-to-b from-blue-400 to-sky-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                )}
+
+                {/* Icon */}
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
+                  isActive
+                    ? "bg-blue-500/20 shadow-sm shadow-blue-500/10"
+                    : "bg-white/[0.04] group-hover:bg-white/[0.08]"
+                )}>
+                  <Icon className={cn(
+                    "w-4 h-4 transition-all duration-200",
+                    isActive ? "text-blue-300 drop-shadow-[0_0_6px_rgba(96,165,250,0.4)]" : "text-white/30 group-hover:text-white/60"
                   )} />
+                </div>
 
-                  {/* Active accent line */}
-                  {isActive && (
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gradient-to-b from-blue-400 to-sky-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                  )}
+                {/* Label */}
+                <span className="relative">{label}</span>
 
-                  {/* Icon */}
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
-                    isActive
-                      ? "bg-blue-500/20 shadow-sm shadow-blue-500/10"
-                      : "bg-white/[0.04] group-hover:bg-white/[0.08]"
-                  )}>
-                    <Icon className={cn(
-                      "w-4 h-4 transition-all duration-200",
-                      isActive ? "text-blue-300 drop-shadow-[0_0_6px_rgba(96,165,250,0.4)]" : "text-white/30 group-hover:text-white/60"
-                    )} />
-                  </div>
-
-                  {/* Label */}
-                  <span className="relative">{label}</span>
-
-                  {/* Shine overlay */}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-l from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                </a>
+                {/* Shine overlay */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-l from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               </Link>
             );
           })}

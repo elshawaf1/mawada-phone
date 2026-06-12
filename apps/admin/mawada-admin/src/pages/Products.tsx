@@ -46,7 +46,7 @@ interface Category { id: string; name: string; nameAr: string; }
 interface Brand { id: string; name: string; nameAr: string; }
 interface Variant {
   id?: string; color: string | null; colorHex: string | null;
-  storage: string | null; ram: string | null; price: number; stock: number; sku: string | null; _isNew?: boolean;
+  storage: string | null; ram: string | null; price: number; stock: number; sku: string | null; batteryHealth: number | null; _isNew?: boolean;
 }
 interface Spec {
   id?: string; groupName: string; key: string; value: string; sortOrder: number; _isNew?: boolean;
@@ -113,7 +113,7 @@ export default function Products() {
     setEditingProduct(null);
   };
 
-  const openEdit = (product: Product) => {
+  const openEdit = async (product: Product) => {
     setEditingProduct(product);
     setName(product.name || "");
     setNameAr(product.nameAr);
@@ -129,6 +129,23 @@ export default function Products() {
     setIsActive(product.isActive);
     setIsFeatured(product.isFeatured);
     setImages(product.product_images?.map(img => ({ ...img })) || []);
+    const { data: existingVariants } = await supabase
+      .from("product_variants")
+      .select("*")
+      .eq("productId", product.id)
+      .order("createdAt");
+    setVariants((existingVariants || []).map(v => ({
+      id: v.id, color: v.color, colorHex: v.colorHex,
+      storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth,
+    })));
+    const { data: existingSpecs } = await supabase
+      .from("specifications")
+      .select("*")
+      .eq("productId", product.id)
+      .order("sortOrder");
+    setSpecs((existingSpecs || []).map(s => ({
+      id: s.id, groupName: s.groupName, key: s.key, value: s.value, sortOrder: s.sortOrder,
+    })));
     setShowForm(true);
   };
 
@@ -211,7 +228,7 @@ export default function Products() {
       }
       if (variants.length > 0) {
         const { error: varError } = await supabase.from("product_variants").insert(variants.map(v => ({
-          productId, color: v.color, colorHex: v.colorHex, storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku,
+          productId, color: v.color, colorHex: v.colorHex, storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth,
         })));
         if (varError) throw varError;
       }
@@ -265,7 +282,7 @@ export default function Products() {
     return matchSearch && matchCategory;
   });
 
-  const addVariant = () => setVariants([...variants, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, _isNew: true }]);
+  const addVariant = () => setVariants([...variants, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, _isNew: true }]);
   const removeVariant = (i: number) => setVariants(variants.filter((_, idx) => idx !== i));
   const updateVariant = (i: number, key: keyof Variant, value: any) => {
     const updated = [...variants];
@@ -804,6 +821,7 @@ export default function Products() {
                         <Input placeholder="RAM" value={v.ram || ""} onChange={(e) => updateVariant(i, "ram", e.target.value)} className="bg-white/50" />
                         <Input type="number" inputMode="numeric" placeholder="السعر" value={v.price} onChange={(e) => updateVariant(i, "price", Number(e.target.value))} className="bg-white/50 font-number" />
                         <Input type="number" inputMode="numeric" placeholder="المخزون" value={v.stock} onChange={(e) => updateVariant(i, "stock", Number(e.target.value))} className="bg-white/50 font-number" />
+                        <Input type="number" inputMode="numeric" min={0} max={100} placeholder="نسبة البطارية %" value={v.batteryHealth ?? ""} onChange={(e) => updateVariant(i, "batteryHealth", e.target.value ? Number(e.target.value) : null)} className="bg-white/50 font-number" />
                       </div>
                     </div>
                   ))}

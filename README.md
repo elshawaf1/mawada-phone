@@ -1,159 +1,110 @@
-# Turborepo starter
- 
-This Turborepo starter is maintained by the Turborepo core team.
+# Mawada Phone (موادة فون)
 
-## Using this example
+Full-stack e-commerce application for a mobile phone store. Includes a customer mobile app (React Native / Expo), an admin dashboard (React / Vite), and a Supabase backend with PostgreSQL, authentication, and edge functions.
 
-Run the following command:
+## Architecture
 
-```sh
-npx create-turbo@latest
+| Layer | Technology |
+|---|---|
+| **Monorepo** | Turborepo + pnpm workspaces |
+| **Mobile App** | Expo SDK 54, React Native 0.81, React 19 |
+| **Admin App** | React 19, Vite 6, Tailwind CSS v4, shadcn/ui |
+| **Backend** | Supabase (PostgreSQL, Auth, Edge Functions) |
+| **Payments** | Paymob Intention API (card + wallet + COD) |
+| **Push Notifications** | Expo Push API |
+
+## Directory Structure
+
+```
+├── apps/
+│   ├── mobile/                  # React Native customer app (Expo)
+│   └── admin/mawada-admin/      # React admin dashboard (Vite)
+├── supabase/
+│   ├── functions/               # Edge Functions (Deno/TypeScript)
+│   │   ├── paymob-intent/       # Create orders + Paymob payment intents
+│   │   ├── paymob-webhook/      # Paymob payment status callbacks
+│   │   └── notification-broadcast/ # Admin push notification broadcasts
+│   ├── 20-consolidated-rls.sql  # Authoritative RLS migration
+│   ├── 2-create-schema.sql      # Database schema
+│   └── migrations/              # Supabase migration history
+├── packages/                    # Shared config packages
+├── SETUP.md                     # Step-by-step setup guide
+└── PAYMOB-INTEGRATION.md        # Payment architecture documentation
 ```
 
-## What's inside?
+## Prerequisites
 
-This Turborepo includes the following packages/apps:
+- Node.js 18+
+- pnpm 9
+- Supabase project
+- Paymob merchant account
+- Expo CLI
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Quick Start
 
 ```sh
-cd my-turborepo
-turbo build
+pnpm install
+pnpm dev
 ```
 
-Without global `turbo`, use your package manager:
+### Environment Variables
+
+**Admin app** (`apps/admin/mawada-admin/.env.local`):
+```
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+**Mobile app** (`apps/mobile/.env`):
+```
+EXPO_PUBLIC_SUPABASE_URL=your-project-url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_PAYMOB_PUBLIC_KEY=your-paymob-key
+EXPO_PUBLIC_PAYMOB_CARD_INTEGRATION_ID=your-card-id
+EXPO_PUBLIC_PAYMOB_WALLET_INTEGRATION_ID=your-wallet-id
+```
+
+### Database Setup
+
+See `SETUP.md` for detailed instructions. Apply migrations in order from `supabase/` directory, with `20-consolidated-rls.sql` as the final authoritative RLS policy file.
+
+### Edge Functions
+
+Deploy edge functions to Supabase:
 
 ```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+supabase functions deploy paymob-intent
+supabase functions deploy paymob-webhook
+supabase functions deploy notification-broadcast
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Required secrets (set via `supabase secrets set`):
+- `PAYMOB_SECRET_KEY`
+- `PAYMOB_HMAC`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `EXPO_ACCESS_TOKEN` (for push notifications)
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Scripts
 
-```sh
-turbo build --filter=docs
-```
+| Command | Description |
+|---|---|
+| `pnpm dev` | Run all apps in dev mode |
+| `pnpm build` | Build all apps |
+| `pnpm lint` | Lint all packages |
+| `pnpm format` | Format code with Prettier |
+| `pnpm check-types` | Type-check all packages |
 
-Without global `turbo`:
+## Security
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+All CRITICAL, HIGH, and MEDIUM security findings have been resolved. See `SECURITY-CRITICAL.md` for the full security audit.
 
-### Develop
+### Key Security Measures
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- Server-side price verification (Paymob intent recalculates from DB)
+- JWT authentication on all edge functions
+- Admin role checks on privileged operations
+- RLS policies consolidated and restricted to user-scoped access
+- JWT tokens stored in encrypted SecureStore (not AsyncStorage)
+- SQL wildcard injection prevented in search queries
+- Input validation on all auth forms (email, phone, password complexity)

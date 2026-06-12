@@ -41,8 +41,6 @@ const statusColors: Record<string, string> = {
 
 const paymentMethodLabels: Record<string, string> = {
   VISA: "فيزا",
-  FAWRY: "فوري",
-  INSTAPAY: "انستا باي",
   WALLET: "محفظة",
   COD: "عند الاستلام",
   BRANCH: "الفرع",

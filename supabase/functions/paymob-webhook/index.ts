@@ -84,14 +84,20 @@ serve(async (req) => {
       return new Response('OK', { status: 200 })
     }
 
+    const merchantOrderId = obj.order?.merchant_order_id
+    if (!merchantOrderId) {
+      console.error('No merchant_order_id in webhook payload')
+      return new Response('OK', { status: 200 })
+    }
+
     const isSuccess = obj.success === true
     const isFailed = obj.success === false && obj.error_occured === true
 
     if (isSuccess) {
       const { data: orders, error: findError } = await supabase
         .from('orders')
-        .select('id')
-        .eq('paymobOrderId', String(paymobOrderId))
+        .select('id, total')
+        .eq('id', String(merchantOrderId))
         .limit(1)
 
       if (findError) {
@@ -100,25 +106,34 @@ serve(async (req) => {
       }
 
       if (orders && orders.length > 0) {
+        const order = orders[0]
+        const expectedAmountCents = Math.round(Number(order.total) * 100)
+        const actualAmountCents = Number(obj.amount_cents)
+
+        if (actualAmountCents !== expectedAmountCents) {
+          console.error(`Amount mismatch: webhook ${actualAmountCents} vs order ${expectedAmountCents} for order ${order.id}`)
+          return new Response('Amount mismatch', { status: 400 })
+        }
+
         const { error: updateError } = await supabase
           .from('orders')
           .update({
             paymentStatus: 'PAID',
             updatedAt: new Date().toISOString(),
           })
-          .eq('id', orders[0].id)
+          .eq('id', order.id)
 
         if (updateError) {
           console.error('Error updating order to PAID:', updateError)
         }
       } else {
-        console.error('No order found for paymobOrderId:', paymobOrderId)
+        console.error('No order found for merchantOrderId:', merchantOrderId)
       }
     } else if (isFailed) {
       const { data: orders } = await supabase
         .from('orders')
         .select('id')
-        .eq('paymobOrderId', String(paymobOrderId))
+        .eq('id', String(merchantOrderId))
         .limit(1)
 
       if (orders && orders.length > 0) {
