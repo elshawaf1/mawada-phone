@@ -15,13 +15,13 @@ INSERT INTO public.brands (id, name, "nameAr", slug, "isActive", "sortOrder") VA
 ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORIES
-INSERT INTO public.categories (id, name, "nameAr", slug, icon, "isActive", "sortOrder") VALUES
-  ('cat-smartphones', 'Smartphones', 'هواتف ذكية', 'smartphones', 'Smartphone', true, 1),
-  ('cat-accessories', 'Accessories', 'اكسسوارات', 'accessories', 'ShoppingBag', true, 2),
-  ('cat-cases', 'Cases & Covers', 'جرابات واغطية', 'cases', 'Shield', true, 3),
-  ('cat-chargers', 'Chargers & Cables', 'شواحن وكابلات', 'chargers', 'Battery', true, 4),
-  ('cat-headphones', 'Headphones & Earbuds', 'سماعات', 'headphones', 'Headphones', true, 5),
-  ('cat-screen-protectors', 'Screen Protectors', 'حماية شاشات', 'screen-protectors', 'Monitor', true, 6)
+INSERT INTO public.categories (id, name, "nameAr", slug, icon, "imageUrl", "isActive", "sortOrder") VALUES
+  ('cat-smartphones', 'Smartphones', 'هواتف ذكية', 'smartphones', 'Smartphone', 'https://api.iconify.design/mdi:cellphone.svg?color=%230F172A&height=64', true, 1),
+  ('cat-accessories', 'Accessories', 'اكسسوارات', 'accessories', 'ShoppingBag', 'https://api.iconify.design/mdi:shopping-bag.svg?color=%230F172A&height=64', true, 2),
+  ('cat-cases', 'Cases & Covers', 'جرابات واغطية', 'cases', 'Shield', 'https://api.iconify.design/mdi:shield-outline.svg?color=%230F172A&height=64', true, 3),
+  ('cat-chargers', 'Chargers & Cables', 'شواحن وكابلات', 'chargers', 'Battery', 'https://api.iconify.design/mdi:battery-charging.svg?color=%230F172A&height=64', true, 4),
+  ('cat-headphones', 'Headphones & Earbuds', 'سماعات', 'headphones', 'Headphones', 'https://api.iconify.design/mdi:headphones.svg?color=%230F172A&height=64', true, 5),
+  ('cat-screen-protectors', 'Screen Protectors', 'حماية شاشات', 'screen-protectors', 'Monitor', 'https://api.iconify.design/mdi:monitor-shimmer.svg?color=%230F172A&height=64', true, 6)
 ON CONFLICT (id) DO NOTHING;
 
 -- PRODUCTS

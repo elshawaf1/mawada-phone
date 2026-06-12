@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye, Star } from "lucide-react";
+import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye, Star, Copy } from "lucide-react";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -271,6 +271,86 @@ export default function Products() {
     }
   };
 
+  const duplicateProduct = async (product: Product) => {
+    try {
+      setSaving(true);
+      const { data: images } = await supabase.from("product_images").select("*").eq("productId", product.id);
+      const { data: variantsData } = await supabase.from("product_variants").select("*").eq("productId", product.id);
+      const { data: specsData } = await supabase.from("specifications").select("*").eq("productId", product.id);
+
+      const newNameAr = `${product.nameAr} (نسخة)`;
+      const nameSource = product.name || newNameAr;
+      let slug = nameSource.replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase() || `product-${Date.now()}`;
+      slug = `${slug}-${Date.now()}`;
+
+      const productData = {
+        name: product.name,
+        nameAr: newNameAr,
+        slug,
+        description: product.description,
+        descriptionAr: product.descriptionAr,
+        categoryId: product.categoryId,
+        brandId: product.brandId,
+        basePrice: product.basePrice,
+        salePrice: product.salePrice,
+        isOnSale: product.isOnSale,
+        totalStock: 0,
+        sku: product.sku ? `${product.sku}-COPY` : null,
+        isActive: false,
+        isFeatured: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const { data: newProduct, error } = await supabase.from("products").insert(productData).select().single();
+      if (error) throw error;
+
+      if (images && images.length > 0) {
+        const { error: imgError } = await supabase.from("product_images").insert(images.map(img => ({
+          productId: newProduct.id,
+          url: img.url,
+          isPrimary: img.isPrimary,
+          sortOrder: img.sortOrder,
+        })));
+        if (imgError) throw imgError;
+      }
+
+      if (variantsData && variantsData.length > 0) {
+        const { error: varError } = await supabase.from("product_variants").insert(variantsData.map(v => ({
+          productId: newProduct.id,
+          color: v.color,
+          colorHex: v.colorHex,
+          storage: v.storage,
+          ram: v.ram,
+          price: v.price,
+          stock: 0,
+          sku: v.sku ? `${v.sku}-COPY` : null,
+          batteryHealth: v.batteryHealth,
+          isActive: v.isActive,
+        })));
+        if (varError) throw varError;
+      }
+
+      if (specsData && specsData.length > 0) {
+        const { error: specError } = await supabase.from("specifications").insert(specsData.map(s => ({
+          productId: newProduct.id,
+          groupName: s.groupName,
+          key: s.key,
+          value: s.value,
+          sortOrder: s.sortOrder,
+        })));
+        if (specError) throw specError;
+      }
+
+      toast({ title: "تم", description: "تم نسخ المنتج بنجاح" });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const toggleActive = async (product: Product) => {
     const { error } = await supabase.from("products").update({ isActive: !product.isActive, updatedAt: new Date().toISOString() }).eq("id", product.id);
     if (!error) fetchData();
@@ -521,21 +601,24 @@ export default function Products() {
                           </div>
                         </TableCell>
                         <TableCell className="py-3">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-muted/60">
-                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
-                              <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
-                                <Edit className="w-3.5 h-3.5" /> تعديل
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => confirmDelete(product.id)} className="cursor-pointer rounded-lg gap-2 text-red-600 focus:text-red-600">
-                                <Trash2 className="w-3.5 h-3.5" /> حذف
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-muted/60">
+                                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
+                                <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
+                                  <Edit className="w-3.5 h-3.5" /> تعديل
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => duplicateProduct(product)} className="cursor-pointer rounded-lg gap-2">
+                                  <Copy className="w-3.5 h-3.5" /> نسخ المنتج
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => confirmDelete(product.id)} className="cursor-pointer rounded-lg gap-2 text-red-600 focus:text-red-600">
+                                  <Trash2 className="w-3.5 h-3.5" /> حذف
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -575,21 +658,24 @@ export default function Products() {
                               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 rounded-full h-4 font-number bg-amber-50 text-amber-700 border-amber-200 shrink-0">مميز</Badge>
                             )}
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/60 shrink-0">
-                                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
-                              <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
-                                <Edit className="w-3.5 h-3.5" /> تعديل
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => confirmDelete(product.id)} className="cursor-pointer rounded-lg gap-2 text-red-600 focus:text-red-600">
-                                <Trash2 className="w-3.5 h-3.5" /> حذف
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/60 shrink-0">
+                                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="rounded-xl min-w-[150px]">
+                                <DropdownMenuItem onClick={() => openEdit(product)} className="cursor-pointer rounded-lg gap-2">
+                                  <Edit className="w-3.5 h-3.5" /> تعديل
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => duplicateProduct(product)} className="cursor-pointer rounded-lg gap-2">
+                                  <Copy className="w-3.5 h-3.5" /> نسخ المنتج
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => confirmDelete(product.id)} className="cursor-pointer rounded-lg gap-2 text-red-600 focus:text-red-600">
+                                  <Trash2 className="w-3.5 h-3.5" /> حذف
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                         {product.name && <p className="text-xs text-muted-foreground truncate mt-0.5">{product.name}</p>}
                         {product.sku && <p className="text-[10px] text-muted-foreground/50 font-mono font-number mt-0.5">{product.sku}</p>}
@@ -794,12 +880,17 @@ export default function Products() {
             </TabsContent>
 
             <TabsContent value="variants" className="space-y-4 mt-4">
-              <Button variant="outline" onClick={addVariant} size="sm" className="rounded-xl">
-                <Plus className="w-4 h-4 ml-1" /> إضافة متغير
-              </Button>
+              <div className="flex items-center justify-between">
+                <Button variant="outline" onClick={addVariant} size="sm" className="rounded-xl">
+                  <Plus className="w-4 h-4 ml-1" /> إضافة خيار بديل
+                </Button>
+                <p className="text-sm text-muted-foreground">كل خيار = منتج بديل بسعر ومخزون مستقل</p>
+              </div>
               {variants.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground/60">
-                  <p className="text-sm">لم يتم إضافة متغيرات بعد</p>
+                <div className="text-center py-8 text-muted-foreground/60 border-2 border-dashed border-border/60 rounded-xl">
+                  <Package className="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
+                  <p className="text-sm">لا توجد خيارات بديلة بعد</p>
+                  <p className="text-xs text-muted-foreground/50 mt-1">أضف ألوان/سعات مختلفة بأسعار مستقلة</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -807,21 +898,57 @@ export default function Products() {
                     <div key={i} className="bg-muted/20 rounded-xl p-4 border border-border/40 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">متغير {i + 1}</span>
-                          {v.colorHex && <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: v.colorHex }} />}
+                          <span className="text-sm font-medium text-primary">بديل {i + 1}</span>
+                          {v.colorHex && <span className="w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: v.colorHex }} title={v.color || ""} />}
+                          {v.storage && <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-mono">{v.storage}</Badge>}
+                          {v.ram && <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-mono">{v.ram}</Badge>}
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => removeVariant(i)} className="h-7 w-7 hover:bg-red-50 hover:text-red-500">
                           <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <Input placeholder="اللون" value={v.color || ""} onChange={(e) => updateVariant(i, "color", e.target.value)} className="bg-white/50 font-number" />
-                        <Input placeholder="Hex (#000000)" value={v.colorHex || ""} onChange={(e) => updateVariant(i, "colorHex", e.target.value)} className="bg-white/50 font-mono" />
-                        <Input placeholder="التخزين" value={v.storage || ""} onChange={(e) => updateVariant(i, "storage", e.target.value)} className="bg-white/50 font-number" />
-                        <Input placeholder="RAM" value={v.ram || ""} onChange={(e) => updateVariant(i, "ram", e.target.value)} className="bg-white/50" />
-                        <Input type="number" inputMode="numeric" placeholder="السعر" value={v.price} onChange={(e) => updateVariant(i, "price", Number(e.target.value))} className="bg-white/50 font-number" />
-                        <Input type="number" inputMode="numeric" placeholder="المخزون" value={v.stock} onChange={(e) => updateVariant(i, "stock", Number(e.target.value))} className="bg-white/50 font-number" />
-                        <Input type="number" inputMode="numeric" min={0} max={100} placeholder="نسبة البطارية %" value={v.batteryHealth ?? ""} onChange={(e) => updateVariant(i, "batteryHealth", e.target.value ? Number(e.target.value) : null)} className="bg-white/50 font-number" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">اللون</Label>
+                          <Input placeholder="مثال: أسود تيتانيوم" value={v.color || ""} onChange={(e) => updateVariant(i, "color", e.target.value)} className="bg-white/50 font-number" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">كود اللون (Hex)</Label>
+                          <Input placeholder="#000000" value={v.colorHex || ""} onChange={(e) => updateVariant(i, "colorHex", e.target.value)} className="bg-white/50 font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">السعة التخزينية</Label>
+                          <Input placeholder="مثال: 256GB" value={v.storage || ""} onChange={(e) => updateVariant(i, "storage", e.target.value)} className="bg-white/50 font-number" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">RAM</Label>
+                          <Input placeholder="مثال: 8GB" value={v.ram || ""} onChange={(e) => updateVariant(i, "ram", e.target.value)} className="bg-white/50" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground font-semibold text-primary">السعر (مطلوب) *</Label>
+                          <Input type="number" inputMode="numeric" placeholder="سعر هذا البديل" value={v.price} onChange={(e) => updateVariant(i, "price", Number(e.target.value))} className="bg-white/50 font-number font-semibold" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">المخزون</Label>
+                          <Input type="number" inputMode="numeric" placeholder="الكمية المتاحة" value={v.stock} onChange={(e) => updateVariant(i, "stock", Number(e.target.value))} className="bg-white/50 font-number" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">SKU (اختياري)</Label>
+                          <Input placeholder="APL-IP16-256-BLK" value={v.sku || ""} onChange={(e) => updateVariant(i, "sku", e.target.value)} className="bg-white/50 font-mono text-xs" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                            <span className="relative" title="نسبة صحة البطارية للأجهزة المجددة (0-100%)">
+                              <span>🔋</span>
+                            </span>
+                            بطارية %
+                          </Label>
+                          <Input type="number" inputMode="numeric" min={0} max={100} placeholder="100" value={v.batteryHealth ?? ""} onChange={(e) => updateVariant(i, "batteryHealth", e.target.value ? Number(e.target.value) : null)} className="bg-white/50 font-number w-24" />
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-border/40 flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>السعر الأساسي للمنتج: <span className="font-number font-medium text-primary">{basePrice.toLocaleString("ar-EG")} ج</span></span>
+                        <span>فرق السعر: <span className="font-number font-medium" style={{ color: v.price > basePrice ? 'red' : v.price < basePrice ? 'green' : 'inherit' }}>{(v.price - basePrice).toLocaleString("ar-EG")} ج</span></span>
                       </div>
                     </div>
                   ))}
