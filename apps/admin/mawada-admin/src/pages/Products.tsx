@@ -1029,7 +1029,7 @@ export default function Products() {
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground">ضريبة</Label>
-                            <Input type="number" inputMode="numeric" min={0} max={100} step={0.5} placeholder="14" value={v.taxRate ?? 0} onChange={(e) => updateVariant(variantId, "taxRate", e.target.value ? Number(e.target.value) : 0)} className="bg-white/50 font-number w-24" />
+                            <Input type="number" inputMode="numeric" min={0} placeholder="0" value={v.taxRate ?? 0} onChange={(e) => updateVariant(variantId, "taxRate", e.target.value ? Number(e.target.value) : 0)} className="bg-white/50 font-number w-24" />
                           </div>
                         </div>
                         <div className="pt-2 border-t border-border/40 flex items-center gap-4 text-xs text-muted-foreground">
