@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -158,8 +158,8 @@ export default function Reports() {
       const [ordersRes, ordersPrevRes, customersRes, customersPrevRes] = await Promise.all([
         orderQuery,
         dateRange !== "all" ? orderQueryPrev : Promise.resolve({ data: [] }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "CUSTOMER"),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "CUSTOMER"),
+        supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "CUSTOMER"),
+        supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "CUSTOMER"),
       ]);
 
       const orders = ordersRes.data || [];

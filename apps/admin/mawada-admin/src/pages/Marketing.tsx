@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,9 +95,9 @@ export default function Marketing() {
   const fetchData = async () => {
     try {
       const [bannersRes, categoriesRes, productsRes] = await Promise.all([
-        supabase.from("banners").select("*").order("sortOrder"),
-        supabase.from("categories").select("*").order("sortOrder"),
-        supabase.from("products").select("id, name, nameAr").eq("isActive", true),
+        supabaseAdmin.from("banners").select("*").order("sortOrder"),
+        supabaseAdmin.from("categories").select("*").order("sortOrder"),
+        supabaseAdmin.from("products").select("id, name, nameAr").eq("isActive", true),
       ]);
 
       setBanners(bannersRes.data || []);
@@ -130,13 +130,13 @@ export default function Marketing() {
     const fileExt = bannerImage.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
 
-    const { data, error } = await supabase.storage
+    const { data, error } = await supabaseAdmin.storage
       .from("banner-images")
       .upload(fileName, bannerImage);
 
     if (error) throw error;
 
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = supabaseAdmin.storage
       .from("banner-images")
       .getPublicUrl(fileName);
 
@@ -168,14 +168,14 @@ export default function Marketing() {
       };
 
       if (editingBanner) {
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from("banners")
           .update(bannerData)
           .eq("id", editingBanner.id);
         if (error) throw error;
         toast({ title: "تم", description: "تم تحديث البانر" });
       } else {
-        const { error } = await supabase.from("banners").insert(bannerData);
+        const { error } = await supabaseAdmin.from("banners").insert(bannerData);
         if (error) throw error;
         toast({ title: "تم", description: "تم إضافة البانر" });
       }
@@ -204,7 +204,7 @@ export default function Marketing() {
   };
 
   const deleteBanner = async (id: string) => {
-    const { error } = await supabase.from("banners").delete().eq("id", id);
+    const { error } = await supabaseAdmin.from("banners").delete().eq("id", id);
     if (error) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } else {
@@ -214,7 +214,7 @@ export default function Marketing() {
   };
 
   const toggleBannerActive = async (banner: Banner) => {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("banners")
       .update({ isActive: !banner.isActive })
       .eq("id", banner.id);
@@ -254,14 +254,14 @@ export default function Marketing() {
       };
 
       if (editingCategory) {
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from("categories")
           .update(catData)
           .eq("id", editingCategory.id);
         if (error) throw error;
         toast({ title: "تم", description: "تم تحديث الفئة" });
       } else {
-        const { error } = await supabase.from("categories").insert(catData);
+        const { error } = await supabaseAdmin.from("categories").insert(catData);
         if (error) throw error;
         toast({ title: "تم", description: "تم إضافة الفئة" });
       }
@@ -288,7 +288,7 @@ export default function Marketing() {
   };
 
   const deleteCategory = async (id: string) => {
-    const { error } = await supabase.from("categories").delete().eq("id", id);
+    const { error } = await supabaseAdmin.from("categories").delete().eq("id", id);
     if (error) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } else {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,7 +110,7 @@ export default function Orders() {
   }, []);
 
   useEffect(() => {
-    const channel = supabase
+    const channel = supabaseAdmin
       .channel('admin-orders-changes')
       .on(
         'postgres_changes',
@@ -121,14 +121,14 @@ export default function Orders() {
       )
       .subscribe();
     return () => {
-      supabase.removeChannel(channel);
+      supabaseAdmin.removeChannel(channel);
     };
   }, []);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from("orders")
         .select(`*, profiles(name, email, phone), addresses(city, street, region, label)`)
         .order("createdAt", { ascending: false });
@@ -143,7 +143,7 @@ export default function Orders() {
   };
 
   const fetchOrderItems = async (orderId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("order_items")
       .select(`*, products(nameAr, name, product_images(url))`)
       .eq("orderId", orderId);
@@ -158,7 +158,7 @@ export default function Orders() {
   const updatePaymentStatus = async (orderId: string, paymentStatus: string) => {
     setUpdating(true);
     try {
-      const { error } = await supabase.from("orders").update({ paymentStatus, updatedAt: new Date().toISOString() }).eq("id", orderId);
+      const { error } = await supabaseAdmin.from("orders").update({ paymentStatus, updatedAt: new Date().toISOString() }).eq("id", orderId);
       if (error) throw error;
       toast({ title: "تم", description: "تم تحديث حالة الدفع" });
       fetchOrders();
@@ -175,7 +175,7 @@ export default function Orders() {
   const updatePaymentMethod = async (orderId: string, paymentMethod: string) => {
     setUpdating(true);
     try {
-      const { error } = await supabase.from("orders").update({ paymentMethod, updatedAt: new Date().toISOString() }).eq("id", orderId);
+      const { error } = await supabaseAdmin.from("orders").update({ paymentMethod, updatedAt: new Date().toISOString() }).eq("id", orderId);
       if (error) throw error;
       toast({ title: "تم", description: "تم تحديث طريقة الدفع" });
       fetchOrders();
@@ -192,7 +192,7 @@ export default function Orders() {
   const updateStatus = async (orderId: string, status: string) => {
     setUpdating(true);
     try {
-      const { error } = await supabase.from("orders").update({ status, updatedAt: new Date().toISOString() }).eq("id", orderId);
+      const { error } = await supabaseAdmin.from("orders").update({ status, updatedAt: new Date().toISOString() }).eq("id", orderId);
       if (error) throw error;
       toast({ title: "تم", description: "تم تحديث حالة الطلب" });
       fetchOrders();

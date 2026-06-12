@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Info, TrendingUp, TrendingDown } from "lucide-react";
@@ -253,7 +253,7 @@ export default function Dashboard() {
           .select("createdAt, total, discount, paymentStatus, paymentMethod")
           .gte("createdAt", prevStart.toISOString())
           .lte("createdAt", now.toISOString()),
-        supabase.rpc("get_top_products", { limit_count: 5 }),
+        supabaseAdmin.rpc("get_top_products", { limit_count: 5 }),
       ]);
 
       const allOrders = ordersRes.data || [];

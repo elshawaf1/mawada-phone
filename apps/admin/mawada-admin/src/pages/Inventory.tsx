@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,12 +84,12 @@ export default function Inventory() {
     setLoading(true);
     try {
       const [productsRes, categoriesRes, brandsRes] = await Promise.all([
-        supabase
+        supabaseAdmin
           .from("products")
           .select(`id, nameAr, name, sku, basePrice, salePrice, totalStock, isActive, isFeatured, categories(nameAr), brands(nameAr), product_variants(id, color, colorHex, storage, ram, price, stock, sku, isActive)`)
           .order("createdAt", { ascending: false }),
-        supabase.from("categories").select("id, nameAr").order("nameAr"),
-        supabase.from("brands").select("id, nameAr").order("nameAr"),
+        supabaseAdmin.from("categories").select("id, nameAr").order("nameAr"),
+        supabaseAdmin.from("brands").select("id, nameAr").order("nameAr"),
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -114,11 +114,11 @@ export default function Inventory() {
     if (!editingProduct) return;
     setSaving(true);
     try {
-      const { error: prodErr } = await supabase.from("products").update({ totalStock: editTotalStock, updatedAt: new Date().toISOString() }).eq("id", editingProduct.id);
+      const { error: prodErr } = await supabaseAdmin.from("products").update({ totalStock: editTotalStock, updatedAt: new Date().toISOString() }).eq("id", editingProduct.id);
       if (prodErr) throw prodErr;
 
       for (const variant of editVariants) {
-        const { error: varErr } = await supabase.from("product_variants").update({ stock: variant.stock }).eq("id", variant.id);
+        const { error: varErr } = await supabaseAdmin.from("product_variants").update({ stock: variant.stock }).eq("id", variant.id);
         if (varErr) throw varErr;
       }
 
@@ -134,7 +134,7 @@ export default function Inventory() {
 
   const toggleActive = async (product: Product) => {
     try {
-      const { error } = await supabase.from("products").update({ isActive: !product.isActive, updatedAt: new Date().toISOString() }).eq("id", product.id);
+      const { error } = await supabaseAdmin.from("products").update({ isActive: !product.isActive, updatedAt: new Date().toISOString() }).eq("id", product.id);
       if (error) throw error;
       toast({ title: "تم", description: product.isActive ? "تم إخفاء المنتج" : "تم إظهار المنتج" });
       fetchData();

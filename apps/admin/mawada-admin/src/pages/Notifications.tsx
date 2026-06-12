@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +75,7 @@ export default function Notifications() {
 
   const fetchBroadcasts = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from("notifications")
         .select("id, title, titleAr, body, bodyAr, type, sentBy, createdAt")
         .not("sentBy", "is", null)
@@ -113,7 +113,7 @@ export default function Notifications() {
 
     setSearching(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from("profiles")
         .select("id, name, email")
         .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
@@ -164,7 +164,7 @@ export default function Notifications() {
 
     setSending(true);
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke("notification-broadcast", {
+      const { data, error: invokeError } = await supabaseAdmin.functions.invoke("notification-broadcast", {
         body: {
           title: title || titleAr,
           titleAr: titleAr || title,
@@ -194,7 +194,7 @@ export default function Notifications() {
     try {
       if (!item.ids || item.ids.length === 0) return;
 
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("notifications")
         .delete()
         .in("id", item.ids);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,11 +89,11 @@ export default function Products() {
     try {
       setLoading(true);
       const [productsRes, categoriesRes, brandsRes] = await Promise.all([
-        supabase.from("products")
+        supabaseAdmin.from("products")
           .select("*, categories(name, nameAr), brands(name, nameAr), product_images(id, url, isPrimary, sortOrder)")
           .order("createdAt", { ascending: false }),
-        supabase.from("categories").select("id, name, nameAr").order("sortOrder"),
-        supabase.from("brands").select("id, name, nameAr").order("sortOrder"),
+        supabaseAdmin.from("categories").select("id, name, nameAr").order("sortOrder"),
+        supabaseAdmin.from("brands").select("id, name, nameAr").order("sortOrder"),
       ]);
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
@@ -162,10 +162,10 @@ export default function Products() {
         if (img.file) {
           const fileExt = img.file.name.split(".").pop();
           const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-          const { error } = await supabase.storage.from("product-images").upload(fileName, img.file);
+          const { error } = await supabaseAdmin.storage.from("product-images").upload(fileName, img.file);
           if (error) throw error;
           uploadedFileNames.push(fileName);
-          const { data: { publicUrl } } = supabase.storage.from("product-images").getPublicUrl(fileName);
+          const { data: { publicUrl } } = supabaseAdmin.storage.from("product-images").getPublicUrl(fileName);
           uploadedUrls.push({ url: publicUrl, isPrimary: img.isPrimary, sortOrder: img.sortOrder });
         }
       }
@@ -189,33 +189,33 @@ export default function Products() {
       let productId = editingProduct?.id;
 
       if (editingProduct) {
-        const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
+        const { error } = await supabaseAdmin.from("products").update(productData).eq("id", editingProduct.id);
         if (error) {
           if (error.message?.includes("duplicate") || error.message?.includes("slug")) {
             productData.slug = `${slug}-${Date.now()}`;
-            const { error: retryError } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
+            const { error: retryError } = await supabaseAdmin.from("products").update(productData).eq("id", editingProduct.id);
             if (retryError) throw retryError;
           } else throw error;
         }
         productId = editingProduct.id;
-        const { data: oldImages } = await supabase.from("product_images").select("url").eq("productId", productId);
+        const { data: oldImages } = await supabaseAdmin.from("product_images").select("url").eq("productId", productId);
         const oldImageUrls = (oldImages || []).map(img => img.url);
         const removedUrls = oldImageUrls.filter(url => !imageRecords.map(r => r.url).includes(url));
         for (const url of removedUrls) {
           const parts = url.split("/");
-          await supabase.storage.from("product-images").remove([parts[parts.length - 1]]).catch(() => {});
+          await supabaseAdmin.storage.from("product-images").remove([parts[parts.length - 1]]).catch(() => {});
         }
         await Promise.all([
-          supabase.from("product_images").delete().eq("productId", productId),
-          supabase.from("product_variants").delete().eq("productId", productId),
-          supabase.from("specifications").delete().eq("productId", productId),
+          supabaseAdmin.from("product_images").delete().eq("productId", productId),
+          supabaseAdmin.from("product_variants").delete().eq("productId", productId),
+          supabaseAdmin.from("specifications").delete().eq("productId", productId),
         ]);
       } else {
-        const { data, error } = await supabase.from("products").insert(productData).select().single();
+        const { data, error } = await supabaseAdmin.from("products").insert(productData).select().single();
         if (error) {
           if (error.message?.includes("duplicate") || error.message?.includes("slug")) {
             productData.slug = `${slug}-${Date.now()}`;
-            const { data: retryData, error: retryError } = await supabase.from("products").insert(productData).select().single();
+            const { data: retryData, error: retryError } = await supabaseAdmin.from("products").insert(productData).select().single();
             if (retryError) throw retryError;
             productId = retryData.id;
           } else throw error;
@@ -223,17 +223,17 @@ export default function Products() {
       }
 
       if (imageRecords.length > 0) {
-        const { error: imgError } = await supabase.from("product_images").insert(imageRecords.map(img => ({ ...img, productId })));
+        const { error: imgError } = await supabaseAdmin.from("product_images").insert(imageRecords.map(img => ({ ...img, productId })));
         if (imgError) throw imgError;
       }
       if (variants.length > 0) {
-        const { error: varError } = await supabase.from("product_variants").insert(variants.map(v => ({
+        const { error: varError } = await supabaseAdmin.from("product_variants").insert(variants.map(v => ({
           productId, color: v.color, colorHex: v.colorHex, storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth, taxRate: v.taxRate || 0,
         })));
         if (varError) throw varError;
       }
       if (specs.length > 0) {
-        const { error: specError } = await supabase.from("specifications").insert(specs.map(s => ({
+        const { error: specError } = await supabaseAdmin.from("specifications").insert(specs.map(s => ({
           productId, groupName: s.groupName, key: s.key, value: s.value, sortOrder: s.sortOrder,
         })));
         if (specError) throw specError;
@@ -245,7 +245,7 @@ export default function Products() {
       fetchData();
     } catch (error: any) {
       for (const fileName of uploadedFileNames) {
-        await supabase.storage.from("product-images").remove([fileName]).catch(() => {});
+        await supabaseAdmin.storage.from("product-images").remove([fileName]).catch(() => {});
       }
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally {
@@ -260,7 +260,7 @@ export default function Products() {
 
   const handleDelete = async () => {
     if (!deletingId) return;
-    const { error } = await supabase.from("products").delete().eq("id", deletingId);
+    const { error } = await supabaseAdmin.from("products").delete().eq("id", deletingId);
     if (error) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } else {
@@ -274,9 +274,9 @@ export default function Products() {
   const duplicateProduct = async (product: Product) => {
     try {
       setSaving(true);
-      const { data: images } = await supabase.from("product_images").select("*").eq("productId", product.id);
-      const { data: variantsData } = await supabase.from("product_variants").select("*").eq("productId", product.id);
-      const { data: specsData } = await supabase.from("specifications").select("*").eq("productId", product.id);
+      const { data: images } = await supabaseAdmin.from("product_images").select("*").eq("productId", product.id);
+      const { data: variantsData } = await supabaseAdmin.from("product_variants").select("*").eq("productId", product.id);
+      const { data: specsData } = await supabaseAdmin.from("specifications").select("*").eq("productId", product.id);
 
       const newNameAr = `${product.nameAr} (نسخة)`;
       const nameSource = product.name || newNameAr;
@@ -302,11 +302,11 @@ export default function Products() {
         updatedAt: new Date().toISOString(),
       };
 
-      const { data: newProduct, error } = await supabase.from("products").insert(productData).select().single();
+      const { data: newProduct, error } = await supabaseAdmin.from("products").insert(productData).select().single();
       if (error) throw error;
 
       if (images && images.length > 0) {
-        const { error: imgError } = await supabase.from("product_images").insert(images.map(img => ({
+        const { error: imgError } = await supabaseAdmin.from("product_images").insert(images.map(img => ({
           productId: newProduct.id,
           url: img.url,
           isPrimary: img.isPrimary,
@@ -316,7 +316,7 @@ export default function Products() {
       }
 
       if (variantsData && variantsData.length > 0) {
-        const { error: varError } = await supabase.from("product_variants").insert(variantsData.map(v => ({
+        const { error: varError } = await supabaseAdmin.from("product_variants").insert(variantsData.map(v => ({
           productId: newProduct.id,
           color: v.color,
           colorHex: v.colorHex,
@@ -333,7 +333,7 @@ export default function Products() {
       }
 
       if (specsData && specsData.length > 0) {
-        const { error: specError } = await supabase.from("specifications").insert(specsData.map(s => ({
+        const { error: specError } = await supabaseAdmin.from("specifications").insert(specsData.map(s => ({
           productId: newProduct.id,
           groupName: s.groupName,
           key: s.key,
@@ -353,7 +353,7 @@ export default function Products() {
   };
 
   const toggleActive = async (product: Product) => {
-    const { error } = await supabase.from("products").update({ isActive: !product.isActive, updatedAt: new Date().toISOString() }).eq("id", product.id);
+    const { error } = await supabaseAdmin.from("products").update({ isActive: !product.isActive, updatedAt: new Date().toISOString() }).eq("id", product.id);
     if (!error) fetchData();
   };
 
@@ -370,7 +370,7 @@ export default function Products() {
   const removeVariant = async (variantId: string) => {
     const variant = variants.find(v => getVariantId(v) === variantId);
     if (variant?.id && !variant._isNew) {
-      const { error } = await supabase.from("product_variants").delete().eq("id", variant.id);
+      const { error } = await supabaseAdmin.from("product_variants").delete().eq("id", variant.id);
       if (error) {
         toast({ title: "خطأ", description: error.message, variant: "destructive" });
         return;

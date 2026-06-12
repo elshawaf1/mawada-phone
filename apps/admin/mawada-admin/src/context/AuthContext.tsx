@@ -68,18 +68,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled) return;
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (cancelled) return;
 
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        if (!cancelled) {
-          if (profile?.role === "ADMIN") {
-            setUser(profile);
-          } else {
-            setUser(null);
+        if (error) {
+          console.warn('Admin session error, clearing:', error.message);
+          await supabase.auth.signOut();
+          if (!cancelled) setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id);
+          if (!cancelled) {
+            if (profile?.role === "ADMIN") {
+              setUser(profile);
+            } else {
+              setUser(null);
+            }
           }
         }
+      } catch (e) {
+        console.warn('Admin session check failed:', e);
+        try { await supabase.auth.signOut(); } catch (_) {}
       }
       if (!cancelled) setLoading(false);
     };
