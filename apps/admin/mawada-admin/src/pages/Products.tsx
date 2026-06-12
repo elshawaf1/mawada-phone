@@ -363,9 +363,9 @@ export default function Products() {
     return matchSearch && matchCategory;
   });
 
-  const getVariantId = (v: Variant) => v._tempId || v.id;
+  const getVariantId = (v: Variant) => v.id || v._tempId || `gen_${Math.random().toString(36).slice(2, 10)}`;
   
-  const addVariant = () => setVariants([...variants, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, taxRate: 0, _isNew: true, _tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}` }]);
+  const addVariant = () => setVariants((prev) => [...prev, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, taxRate: 0, _isNew: true, _tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}` }]);
   
   const removeVariant = async (variantId: string) => {
     const variant = variants.find(v => getVariantId(v) === variantId);
@@ -376,7 +376,7 @@ export default function Products() {
         return;
       }
     }
-    setVariants(variants.filter((v) => getVariantId(v) !== variantId));
+    setVariants((prev) => prev.filter((v) => getVariantId(v) !== variantId));
   };
   
   const updateVariant = (variantId: string, key: keyof Variant, value: any) => {
@@ -908,7 +908,7 @@ export default function Products() {
               ) : (
                 <div className="space-y-3">
                   {variants.map((v, i) => {
-                    const variantId = v._tempId || v.id || `idx_${i}`;
+                    const variantId = getVariantId(v);
                     return (
                       <div key={variantId} className="bg-muted/20 rounded-xl p-4 border border-border/40 space-y-3">
                         <div className="flex items-center justify-between">
