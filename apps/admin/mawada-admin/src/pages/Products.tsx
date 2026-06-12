@@ -32,6 +32,7 @@ interface Product {
   isOnSale: boolean;
   totalStock: number;
   sku: string | null;
+  taxRate: number;
   isActive: boolean;
   isFeatured: boolean;
   createdAt: string;
@@ -46,7 +47,7 @@ interface Category { id: string; name: string; nameAr: string; }
 interface Brand { id: string; name: string; nameAr: string; }
 interface Variant {
   id?: string; color: string | null; colorHex: string | null;
-  storage: string | null; ram: string | null; price: number; stock: number; sku: string | null; batteryHealth: number | null; _isNew?: boolean;
+  storage: string | null; ram: string | null; price: number; stock: number; sku: string | null; batteryHealth: number | null; _isNew?: boolean; _tempId?: string;
 }
 interface Spec {
   id?: string; groupName: string; key: string; value: string; sortOrder: number; _isNew?: boolean;
@@ -77,6 +78,7 @@ export default function Products() {
   const [isOnSale, setIsOnSale] = useState(false);
   const [totalStock, setTotalStock] = useState(0);
   const [sku, setSku] = useState("");
+  const [taxRate, setTaxRate] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [images, setImages] = useState<{ id?: string; url: string; isPrimary: boolean; sortOrder: number; file?: File }[]>([]);
@@ -108,8 +110,8 @@ export default function Products() {
   const resetForm = () => {
     setName(""); setNameAr(""); setDescription(""); setDescriptionAr("");
     setCategoryId(""); setBrandId(""); setBasePrice(0); setSalePrice(null);
-    setIsOnSale(false); setTotalStock(0); setSku(""); setIsActive(true);
-    setIsFeatured(false); setImages([]); setVariants([]); setSpecs([]);
+    setIsOnSale(false); setTotalStock(0); setSku(""); setTaxRate(0);
+    setIsActive(true); setIsFeatured(false); setImages([]); setVariants([]); setSpecs([]);
     setEditingProduct(null);
   };
 
@@ -126,6 +128,7 @@ export default function Products() {
     setIsOnSale(product.isOnSale);
     setTotalStock(product.totalStock);
     setSku(product.sku || "");
+    setTaxRate(product.taxRate || 0);
     setIsActive(product.isActive);
     setIsFeatured(product.isFeatured);
     setImages(product.product_images?.map(img => ({ ...img })) || []);
@@ -182,7 +185,7 @@ export default function Products() {
         name, nameAr, slug, description, descriptionAr,
         categoryId: categoryId || null, brandId: brandId || null,
         basePrice, salePrice, isOnSale, totalStock,
-        sku: sku || null, isActive, isFeatured,
+        sku: sku || null, taxRate: taxRate || 0, isActive, isFeatured,
         updatedAt: new Date().toISOString(),
       };
 
@@ -296,6 +299,7 @@ export default function Products() {
         isOnSale: product.isOnSale,
         totalStock: 0,
         sku: product.sku ? `${product.sku}-COPY` : null,
+        taxRate: product.taxRate || 0,
         isActive: false,
         isFeatured: false,
         createdAt: new Date().toISOString(),
@@ -362,12 +366,10 @@ export default function Products() {
     return matchSearch && matchCategory;
   });
 
-  const addVariant = () => setVariants([...variants, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, _isNew: true }]);
-  const removeVariant = (i: number) => setVariants(variants.filter((_, idx) => idx !== i));
-  const updateVariant = (i: number, key: keyof Variant, value: any) => {
-    const updated = [...variants];
-    updated[i] = { ...updated[i], [key]: value };
-    setVariants(updated);
+  const addVariant = () => setVariants([...variants, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, _isNew: true, _tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}` }]);
+  const removeVariant = (tempId: string) => setVariants(variants.filter((v) => v._tempId !== tempId && v.id !== tempId));
+  const updateVariant = (tempId: string, key: keyof Variant, value: any) => {
+    setVariants(variants.map((v) => (v._tempId === tempId || v.id === tempId) ? { ...v, [key]: value } : v));
   };
   const addSpec = () => setSpecs([...specs, { groupName: "", key: "", value: "", sortOrder: specs.length, _isNew: true }]);
   const removeSpec = (i: number) => setSpecs(specs.filter((_, idx) => idx !== i));
@@ -796,12 +798,22 @@ export default function Products() {
                   <Input type="number" inputMode="numeric" value={totalStock} onChange={(e) => setTotalStock(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">SKU</Label>
                   <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="APL-IP16" className="bg-muted/30 focus:bg-background font-mono" />
                 </div>
-                <div className="flex flex-wrap items-center gap-4 pt-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">نسبة الضريبة % (عرض فقط)</Label>
+                  <Input type="number" inputMode="numeric" min={0} max={100} step={0.5} value={taxRate} onChange={(e) => setTaxRate(e.target.value ? Number(e.target.value) : 0)} placeholder="14" className="bg-muted/30 focus:bg-background font-number" />
+                  <p className="text-xs text-muted-foreground">معلومة للعرض فقط، لا تحتسب في الدفع</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">ضريبة على السعر الأساسي</Label>
+                  <Input type="text" value={basePrice > 0 && taxRate > 0 ? `${((basePrice * taxRate / 100)).toLocaleString("ar-EG")} ج` : "—"} readOnly className="bg-muted/30 focus:bg-background font-number text-emerald-600" />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 pt-6">
                   <div className="flex items-center gap-2">
                     <Switch checked={isOnSale} onCheckedChange={setIsOnSale} id="onSale" />
                     <Label htmlFor="onSale" className="text-sm cursor-pointer">عرض</Label>
@@ -815,7 +827,6 @@ export default function Products() {
                     <Label htmlFor="isFeatured" className="text-sm cursor-pointer">مميز</Label>
                   </div>
                 </div>
-              </div>
             </TabsContent>
 
             <TabsContent value="images" className="space-y-4 mt-4">

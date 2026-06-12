@@ -167,10 +167,23 @@ serve(async (req) => {
     } else {
       // --- Server-side price calculation (C1) ---
       const productIds = cartItems.map((item: { productId: string }) => item.productId)
+      const variantIds = cartItems.filter((i: any) => i.variantId).map((i: any) => i.variantId)
+
       const { data: products, error: prodErr } = await supabase
         .from('products')
         .select('id, basePrice, nameAr, name, totalStock')
         .in('id', productIds)
+
+      let variantMap = new Map()
+      if (variantIds.length > 0) {
+        const { data: variants } = await supabase
+          .from('product_variants')
+          .select('id, price, productId, stock')
+          .in('id', variantIds)
+        if (variants) {
+          variantMap = new Map(variants.map((v: any) => [v.id, v]))
+        }
+      }
 
       if (prodErr || !products || products.length === 0) {
         return fail('Could not verify product prices')
@@ -184,10 +197,21 @@ serve(async (req) => {
         if (!product) {
           return fail(`Product ${item.productId} not found`)
         }
-        if (product.totalStock < item.quantity) {
+
+        // Use variant price if variantId provided, otherwise basePrice
+        let unitPrice = Number(product.basePrice)
+        let availableStock = product.totalStock
+
+        if (item.variantId && variantMap.has(item.variantId)) {
+          const variant = variantMap.get(item.variantId)
+          unitPrice = Number(variant.price)
+          availableStock = variant.stock ?? 0
+        }
+
+        if (availableStock < item.quantity) {
           return fail(`Insufficient stock for ${product.nameAr || product.name}`)
         }
-        subtotal += product.basePrice * item.quantity
+        subtotal += unitPrice * item.quantity
       }
 
       let discount = 0
@@ -248,24 +272,34 @@ serve(async (req) => {
       }
 
       if (cartItems?.length > 0) {
-        const orderItems = cartItems.map((item: { productId?: string; variantId?: string; quantity: number }) => ({
-          id: generateId('oi'),
-          orderId: order.id,
-          productId: item.productId || null,
-          variantId: item.variantId || null,
-          quantity: item.quantity,
-          unitPrice: productMap.get(item.productId)?.basePrice || 0,
-        }))
+        const orderItems = cartItems.map((item: { productId?: string; variantId?: string; quantity: number }) => {
+          let unitPrice = Number(productMap.get(item.productId)?.basePrice || 0)
+          if (item.variantId && variantMap.has(item.variantId)) {
+            unitPrice = Number(variantMap.get(item.variantId).price)
+          }
+          return {
+            id: generateId('oi'),
+            orderId: order.id,
+            productId: item.productId || null,
+            variantId: item.variantId || null,
+            quantity: item.quantity,
+            unitPrice,
+          }
+        })
         const { error: oiErr } = await supabase.from('order_items').insert(orderItems)
         if (oiErr) {
           console.error('order_items insert error:', oiErr.message)
         }
 
-        orderItemsForPaymob = cartItems.map((item: { productId: string; quantity: number }) => {
+        orderItemsForPaymob = cartItems.map((item: { productId: string; variantId?: string; quantity: number }) => {
           const p = productMap.get(item.productId)
+          let unitPrice = Number(p?.basePrice || 0)
+          if (item.variantId && variantMap.has(item.variantId)) {
+            unitPrice = Number(variantMap.get(item.variantId).price)
+          }
           return {
             name: p?.nameAr || p?.name || 'Product',
-            unitPrice: Number(p?.basePrice || 0),
+            unitPrice,
             quantity: item.quantity,
           }
         })
