@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Mawada Phone</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.7;
+            color: #1a1a2e;
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        header {
+            text-align: center;
+            padding: 48px 24px;
+            background: linear-gradient(135deg, #0F2A44 0%, #1a4a7a 100%);
+            color: white;
+        }
+        header h1 { font-size: 2rem; margin-bottom: 8px; }
+        header p { opacity: 0.85; font-size: 0.95rem; }
+        h2 {
+            font-size: 1.3rem;
+            color: #0F2A44;
+            margin: 32px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #e8ecf1;
+        }
+        h3 {
+            font-size: 1.05rem;
+            color: #2c3e50;
+            margin: 20px 0 8px;
+        }
+        p, li { font-size: 0.95rem; color: #333; }
+        p { margin-bottom: 12px; }
+        ul { margin: 8px 0 16px 20px; }
+        li { margin-bottom: 6px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 20px;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+        }
+        th {
+            background: #0F2A44;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) { background: #f4f6f9; }
+        .highlight {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.9rem;
+        }
+        footer {
+            text-align: center;
+            padding: 24px;
+            color: #6c757d;
+            font-size: 0.85rem;
+            border-top: 1px solid #dee2e6;
+            margin-top: 40px;
+        }
+        a { color: #0F2A44; }
+        .lang-switch {
+            text-align: center;
+            margin-top: 16px;
+        }
+        .lang-switch a {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #0F2A44;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .lang-switch a:hover { background: #1a4a7a; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Privacy Policy</h1>
+        <p>Mawada Phone (mudafon)</p>
+        <p>Last updated: June 17, 2026</p>
+    </header>
+
+    <div class="container">
+        <div class="lang-switch">
+            <a href="ar.html">العربية</a>
+        </div>
+
+        <h2>1. Introduction</h2>
+        <p>Welcome to Mawada Phone ("we," "our," or "us"). We are committed to protecting your privacy and personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application ("App").</p>
+        <p>By using the App, you agree to the collection and use of information in accordance with this policy. If you do not agree, please do not use the App.</p>
+
+        <h2>2. Information We Collect</h2>
+
+        <h3>2.1 Information You Provide Directly</h3>
+        <table>
+            <thead>
+                <tr><th>Data Type</th><th>When Collected</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Full Name</td><td>Registration, Profile Edit</td><td>Account identification and order processing</td></tr>
+                <tr><td>Email Address</td><td>Registration, Login</td><td>Account authentication and communication</td></tr>
+                <tr><td>Phone Number</td><td>Registration, Profile Edit, Delivery Addresses</td><td>Account verification, delivery coordination, and customer support</td></tr>
+                <tr><td>Password</td><td>Registration, Password Change</td><td>Account security (stored securely in hashed form)</td></tr>
+                <tr><td>Delivery Addresses</td><td>Adding/editing delivery locations</td><td>Order delivery (city, street, region, address label, contact phone)</td></tr>
+                <tr><td>Order Notes</td><td>Checkout</td><td>Special delivery instructions</td></tr>
+            </tbody>
+        </table>
+
+        <h3>2.2 Information Collected Automatically</h3>
+        <table>
+            <thead>
+                <tr><th>Data Type</th><th>How Collected</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Push Notification Token</td><td>Expo Push Notification Service (on login)</td><td>Order status updates, promotional notifications</td></tr>
+                <tr><td>Device Platform</td><td>Expo Notifications SDK</td><td>Notification delivery optimization</td></tr>
+                <tr><td>Session Tokens</td><td>Supabase Auth (auto-refresh)</td><td>Maintaining your login session</td></tr>
+            </tbody>
+        </table>
+
+        <h3>2.3 Information Stored Locally on Your Device</h3>
+        <ul>
+            <li><strong>Language preference</strong> (Arabic/English)</li>
+            <li><strong>Theme preference</strong> (Light/Dark mode)</li>
+            <li><strong>Recent search queries</strong> (last 10 searches)</li>
+            <li><strong>Cached system settings</strong> (delivery fees, tax rates — refreshed every 5 minutes)</li>
+        </ul>
+        <p>This data is stored locally using AsyncStorage and is never transmitted to our servers.</p>
+
+        <h3>2.4 Information We Do NOT Collect</h3>
+        <div class="highlight">
+            <ul>
+                <li>We do <strong>not</strong> collect GPS or device location data</li>
+                <li>We do <strong>not</strong> access your camera or microphone</li>
+                <li>We do <strong>not</strong> collect browsing history outside the App</li>
+                <li>We do <strong>not</strong> use analytics or tracking SDKs (no Google Analytics, Firebase Analytics, Sentry, or similar)</li>
+                <li>We do <strong>not</strong> collect data from social media accounts</li>
+            </ul>
+        </div>
+
+        <h2>3. How We Use Your Information</h2>
+        <ul>
+            <li><strong>Account Management:</strong> Creating and managing your account, authenticating your identity, and providing password recovery.</li>
+            <li><strong>Order Processing:</strong> Processing purchases, managing order history, tracking order status, and coordinating deliveries.</li>
+            <li><strong>Payment Processing:</strong> Facilitating secure payments through our payment processor (Paymob). We do not store your credit card details.</li>
+            <li><strong>Customer Support:</strong> Responding to your inquiries and resolving issues.</li>
+            <li><strong>Push Notifications:</strong> Sending order status updates, delivery notifications, and promotional offers (you can opt out at any time through your device settings).</li>
+            <li><strong>App Improvement:</strong> Maintaining and improving the App's functionality and user experience.</li>
+        </ul>
+
+        <h2>4. Payment Information</h2>
+        <p>We use <strong>Paymob</strong> as our third-party payment processor. When you make a payment:</p>
+        <ul>
+            <li>Payment card details (card number, CVV, expiry date) are entered directly into the Paymob native payment interface and <strong>never touch our application or servers</strong>.</li>
+            <li>We only receive a payment confirmation or failure status from Paymob.</li>
+            <li>Paymob is PCI-DSS compliant and handles all sensitive payment data securely.</li>
+        </ul>
+        <p>Supported payment methods include:</p>
+        <ul>
+            <li>Visa / Mastercard (via Paymob card integration)</li>
+            <li>Digital Wallets: Vodafone Cash, Orange Cash, We Pay (via Paymob wallet integration)</li>
+            <li>Cash on Delivery (COD)</li>
+        </ul>
+
+        <h2>5. Data Storage and Security</h2>
+        <h3>5.1 Where Your Data Is Stored</h3>
+        <ul>
+            <li><strong>Supabase Cloud:</strong> Your account data, orders, addresses, and preferences are stored in Supabase's secure cloud infrastructure.</li>
+            <li><strong>Local Device Storage:</strong> Session tokens, language preferences, theme settings, and recent searches are stored locally on your device using AsyncStorage.</li>
+        </ul>
+
+        <h3>5.2 Security Measures</h3>
+        <ul>
+            <li>Passwords are hashed using industry-standard algorithms and are never stored in plain text.</li>
+            <li>All data transmission between the App and our servers is encrypted using TLS/HTTPS.</li>
+            <li>Payment processing is handled by PCI-DSS compliant Paymob.</li>
+            <li>Session tokens are automatically refreshed to maintain secure access.</li>
+        </ul>
+
+        <h3>5.3 Data Retention</h3>
+        <ul>
+            <li><strong>Account data:</strong> Retained as long as your account is active.</li>
+            <li><strong>Order data:</strong> Retained for a minimum of 5 years for legal and accounting purposes.</li>
+            <li><strong>Push notification tokens:</strong> Deleted when you log out of the App.</li>
+            <li><strong>Local data:</strong> Stored on your device until you clear it or uninstall the App.</li>
+        </ul>
+
+        <h2>6. Third-Party Services</h2>
+        <table>
+            <thead>
+                <tr><th>Service</th><th>Purpose</th><th>Data Processed</th><th>Privacy Policy</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Supabase</td>
+                    <td>Backend database and authentication</td>
+                    <td>Account data, orders, addresses, products</td>
+                    <td><a href="https://supabase.com/privacy" target="_blank">supabase.com/privacy</a></td>
+                </tr>
+                <tr>
+                    <td>Paymob</td>
+                    <td>Payment processing</td>
+                    <td>Payment amounts, user name/email/phone (for transaction processing)</td>
+                    <td><a href="https://paymob.com/privacy" target="_blank">paymob.com/privacy</a></td>
+                </tr>
+                <tr>
+                    <td>Expo (Push Notification Service)</td>
+                    <td>Push notification delivery</td>
+                    <td>Push tokens, device platform</td>
+                    <td><a href="https://expo.dev/privacy" target="_blank">expo.dev/privacy</a></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>7. Data Sharing and Disclosure</h2>
+        <p>We do <strong>not</strong> sell, trade, or rent your personal information to third parties. We may share your information only in the following circumstances:</p>
+        <ul>
+            <li><strong>Payment Processing:</strong> Necessary transaction data is shared with Paymob to process your payment.</li>
+            <li><strong>Legal Requirements:</strong> If required by law, court order, or governmental regulation.</li>
+            <li><strong>Business Transfers:</strong> In the event of a merger, acquisition, or sale of assets, your data may be transferred with appropriate notice.</li>
+            <li><strong>With Your Consent:</strong> When you explicitly authorize us to share your information.</li>
+        </ul>
+
+        <h2>8. Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+            <li><strong>Access:</strong> View all personal data we hold about you through the App's profile section.</li>
+            <li><strong>Edit:</strong> Update or correct your personal information (name, phone, email, addresses) directly in the App.</li>
+            <li><strong>Delete:</strong> Request deletion of your account and all associated data by contacting us at <a href="mailto:elshawafa04@gmail.com">elshawafa04@gmail.com</a>.</li>
+            <li><strong>Opt-Out:</strong> Disable push notifications at any time through your device settings.</li>
+            <li><strong>Data Portability:</strong> Request a copy of your personal data in a commonly used format.</li>
+            <li><strong>Withdraw Consent:</strong> Stop using the App at any time. Account deletion will remove your data from our servers.</li>
+        </ul>
+
+        <h2>9. Children's Privacy</h2>
+        <p>The App is not intended for use by children under the age of 13 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal information from children. If we become aware that a child has provided us with personal data, we will take steps to delete such information promptly.</p>
+
+        <h2>10. International Data Transfers</h2>
+        <p>Your data may be processed in countries other than your country of residence. Supabase's infrastructure is hosted on global cloud providers. We ensure that appropriate safeguards are in place to protect your data in accordance with this Privacy Policy.</p>
+
+        <h2>11. Changes to This Privacy Policy</h2>
+        <p>We may update this Privacy Policy from time to time. We will notify you of any material changes by:</p>
+        <ul>
+            <li>Posting the updated policy in the App</li>
+            <li>Sending a push notification (if you have notifications enabled)</li>
+        </ul>
+        <p>The "Last updated" date at the top of this page indicates when the policy was last revised.</p>
+
+        <h2>12. Contact Us</h2>
+        <p>If you have any questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact us:</p>
+        <ul>
+            <li><strong>Email:</strong> <a href="mailto:elshawafa04@gmail.com">elshawafa04@gmail.com</a></li>
+            <li><strong>App Name:</strong> Mawada Phone</li>
+        </ul>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Mawada Phone. All rights reserved.</p>
+    </footer>
+</body>
+</html>
