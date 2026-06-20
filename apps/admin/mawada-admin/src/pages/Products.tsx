@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye, Star, Copy } from "lucide-react";
+import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye, Copy } from "lucide-react";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";

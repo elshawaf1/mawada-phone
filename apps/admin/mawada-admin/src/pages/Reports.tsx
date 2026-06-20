@@ -286,12 +286,12 @@ export default function Reports() {
   return (
     <div className="space-y-5" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">التقارير</h1>
           <p className="text-sm text-muted-foreground mt-0.5">تحليل شامل لأداء المبيعات</p>
         </div>
-        <div className="flex gap-1.5 bg-muted/40 p-1 rounded-xl border border-border/40">
+        <div className="flex gap-1.5 bg-muted/40 p-1 rounded-xl border border-border/40 flex-wrap">
           {datePresets.map((preset) => (
             <button
               key={preset.value}
@@ -470,6 +470,7 @@ export default function Reports() {
           </div>
         </CardHeader>
         <CardContent className="pt-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-b border-border/40 hover:bg-transparent">
@@ -496,6 +497,7 @@ export default function Reports() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

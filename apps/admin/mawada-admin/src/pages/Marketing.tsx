@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, ImagePlus, Loader2, LayoutGrid, Link } from "lucide-react";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { Plus, Edit, Trash2, ImagePlus, Loader2, LayoutGrid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Banner {
@@ -31,6 +32,9 @@ interface Category {
   name: string;
   nameAr: string;
   icon: string | null;
+  imageUrl: string | null;
+  homeImageUrl: string | null;
+  searchImageUrl: string | null;
   parentId: string | null;
   isActive: boolean;
   sortOrder: number;
@@ -87,6 +91,8 @@ export default function Marketing() {
   const [catParentId, setCatParentId] = useState("");
   const [catSortOrder, setCatSortOrder] = useState(0);
   const [catActive, setCatActive] = useState(true);
+  const [catHomeImageUrl, setCatHomeImageUrl] = useState("");
+  const [catSearchImageUrl, setCatSearchImageUrl] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -233,6 +239,8 @@ export default function Marketing() {
     setCatParentId("");
     setCatSortOrder(0);
     setCatActive(true);
+    setCatHomeImageUrl("");
+    setCatSearchImageUrl("");
     setEditingCategory(null);
   };
 
@@ -244,14 +252,26 @@ export default function Marketing() {
 
     setSaving(true);
     try {
-      const catData = {
+      const nameSource = catName || catNameAr;
+      const baseSlug = nameSource
+        .replace(/[^\w\s\u0600-\u06FF-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase() || `category-${Date.now()}`;
+
+      const catData: Record<string, any> = {
         name: catName,
         nameAr: catNameAr,
+        slug: baseSlug,
         icon: catIcon,
         parentId: catParentId || null,
         isActive: catActive,
         sortOrder: catSortOrder,
       };
+
+      if (catHomeImageUrl) catData.homeImageUrl = catHomeImageUrl;
+      if (catSearchImageUrl) catData.searchImageUrl = catSearchImageUrl;
 
       if (editingCategory) {
         const { error } = await supabaseAdmin
@@ -262,7 +282,13 @@ export default function Marketing() {
         toast({ title: "تم", description: "تم تحديث الفئة" });
       } else {
         const { error } = await supabaseAdmin.from("categories").insert(catData);
-        if (error) throw error;
+        if (error) {
+          if (error.message?.includes("duplicate") || error.message?.includes("slug")) {
+            catData.slug = `${baseSlug}-${Date.now()}`;
+            const { error: retryError } = await supabaseAdmin.from("categories").insert(catData);
+            if (retryError) throw retryError;
+          } else throw error;
+        }
         toast({ title: "تم", description: "تم إضافة الفئة" });
       }
 
@@ -284,6 +310,8 @@ export default function Marketing() {
     setCatParentId(category.parentId || "");
     setCatSortOrder(category.sortOrder);
     setCatActive(category.isActive);
+    setCatHomeImageUrl(category.homeImageUrl || "");
+    setCatSearchImageUrl(category.searchImageUrl || "");
     setShowCategoryForm(true);
   };
 
@@ -351,47 +379,86 @@ export default function Marketing() {
               </CardContent>
             </Card>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="text-right font-semibold text-foreground/70">الصورة</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">العنوان</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">الرابط</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">الحالة</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">الترتيب</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {banners.map((banner) => (
-                  <TableRow key={banner.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell>
-                      <img src={banner.imageUrl} alt="" className="w-16 h-10 object-cover rounded-lg ring-1 ring-black/5" />
-                    </TableCell>
-                    <TableCell className="font-medium">{banner.titleAr || banner.title}</TableCell>
-                    <TableCell>
-                      {banner.linkType && (
-                        <Badge variant="outline" className="font-medium">{linkTypeLabels[banner.linkType] || banner.linkType}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Switch checked={banner.isActive} onCheckedChange={() => toggleBannerActive(banner)} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{banner.sortOrder}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary" onClick={() => editBanner(banner)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="hover:bg-destructive/10" onClick={() => deleteBanner(banner.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ResponsiveTable
+              desktop={
+                <Card borderless className="shadow-sm overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="text-right font-semibold text-foreground/70">الصورة</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">العنوان</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">الرابط</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">الحالة</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">الترتيب</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {banners.map((banner) => (
+                        <TableRow key={banner.id} className="hover:bg-muted/30 transition-colors">
+                          <TableCell>
+                            <img src={banner.imageUrl} alt="" className="w-16 h-10 object-cover rounded-lg ring-1 ring-black/5" />
+                          </TableCell>
+                          <TableCell className="font-medium">{banner.titleAr || banner.title}</TableCell>
+                          <TableCell>
+                            {banner.linkType && (
+                              <Badge variant="outline" className="font-medium">{linkTypeLabels[banner.linkType] || banner.linkType}</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Switch checked={banner.isActive} onCheckedChange={() => toggleBannerActive(banner)} />
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{banner.sortOrder}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary" onClick={() => editBanner(banner)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="hover:bg-destructive/10" onClick={() => deleteBanner(banner.id)}>
+                                <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              }
+              mobile={
+                <div className="space-y-3">
+                  {banners.map((banner) => (
+                    <Card key={banner.id} borderless className="shadow-sm overflow-hidden">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <img src={banner.imageUrl} alt="" className="w-20 h-12 object-cover rounded-lg ring-1 ring-black/5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{banner.titleAr || banner.title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {banner.linkType && (
+                                <Badge variant="outline" className="text-[10px] font-medium">{linkTypeLabels[banner.linkType] || banner.linkType}</Badge>
+                              )}
+                              <span className="text-xs text-muted-foreground">ترتيب: {banner.sortOrder}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-3">
+                          <Switch checked={banner.isActive} onCheckedChange={() => toggleBannerActive(banner)} />
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => editBanner(banner)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={() => deleteBanner(banner.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              }
+            />
           )}
         </TabsContent>
 
@@ -414,61 +481,120 @@ export default function Marketing() {
               </CardContent>
             </Card>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="text-right font-semibold text-foreground/70">الأيقونة</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">الاسم</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">الفئة الأب</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">الحالة</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">الترتيب</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => {
-                  const parent = categories.find(c => c.id === category.parentId);
-                  return (
-                    <TableRow key={category.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell>
-                        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center ring-1 ring-black/5">
-                          <span className="text-xs font-medium text-muted-foreground">{category.icon}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{category.nameAr}{category.name ? <span className="text-muted-foreground text-xs"> ({category.name})</span> : ""}</TableCell>
-                      <TableCell className="text-muted-foreground">{parent?.nameAr || "-"}</TableCell>
-                      <TableCell>
-                        <Switch checked={category.isActive} onCheckedChange={() => toggleCategoryActive(category)} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{category.sortOrder}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary" onClick={() => editCategory(category)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="hover:bg-destructive/10" onClick={() => deleteCategory(category.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <ResponsiveTable
+              desktop={
+                <Card borderless className="shadow-sm overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="text-right font-semibold text-foreground/70">الأيقونة</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">الاسم</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70 hidden sm:table-cell">صورة الصفحة الرئيسية</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70 hidden md:table-cell">أيقونة صفحة البحث</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70 hidden md:table-cell">الفئة الأب</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">الحالة</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70 hidden sm:table-cell">الترتيب</TableHead>
+                        <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categories.map((category) => {
+                        const parent = categories.find(c => c.id === category.parentId);
+                        return (
+                          <TableRow key={category.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell>
+                              <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center ring-1 ring-black/5">
+                                <span className="text-xs font-medium text-muted-foreground">{category.icon}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium max-w-[200px] truncate">{category.nameAr}{category.name ? <span className="text-muted-foreground text-xs"> ({category.name})</span> : ""}</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {category.homeImageUrl ? (
+                                <img src={category.homeImageUrl} alt="" className="w-12 h-8 object-cover rounded ring-1 ring-black/5" />
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {category.searchImageUrl ? (
+                                <img src={category.searchImageUrl} alt="" className="w-8 h-8 object-contain rounded-full ring-1 ring-black/5 bg-muted" />
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground hidden md:table-cell">{parent?.nameAr || "-"}</TableCell>
+                            <TableCell>
+                              <Switch checked={category.isActive} onCheckedChange={() => toggleCategoryActive(category)} />
+                            </TableCell>
+                            <TableCell className="text-muted-foreground hidden sm:table-cell">{category.sortOrder}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary" onClick={() => editCategory(category)}>
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="hover:bg-destructive/10" onClick={() => deleteCategory(category.id)}>
+                                  <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </Card>
+              }
+              mobile={
+                <div className="space-y-3">
+                  {categories.map((category) => {
+                    const parent = categories.find(c => c.id === category.parentId);
+                    return (
+                      <Card key={category.id} borderless className="shadow-sm overflow-hidden">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center ring-1 ring-black/5 shrink-0">
+                              <span className="text-xs font-medium text-muted-foreground">{category.icon}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{category.nameAr}</p>
+                              {category.name && <p className="text-xs text-muted-foreground truncate">{category.name}</p>}
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {parent && <Badge variant="outline" className="text-[10px]">{parent.nameAr}</Badge>}
+                                <span className="text-xs text-muted-foreground">ترتيب: {category.sortOrder}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-3">
+                            <Switch checked={category.isActive} onCheckedChange={() => toggleCategoryActive(category)} />
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => editCategory(category)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={() => deleteCategory(category.id)}>
+                                <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              }
+            />
           )}
         </TabsContent>
       </Tabs>
 
       {/* Banner Form Dialog */}
       <Dialog open={showBannerForm} onOpenChange={setShowBannerForm}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingBanner ? "تعديل البانر" : "إضافة بانر"}</DialogTitle>
             <DialogDescription>{editingBanner ? "قم بتعديل بيانات البانر" : "أضف بانر جديد للصفحة الرئيسية"}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>العنوان (English)</Label>
                 <Input value={bannerTitle} onChange={(e) => setBannerTitle(e.target.value)} />
@@ -521,7 +647,7 @@ export default function Marketing() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الترتيب</Label>
                 <Input type="number" value={bannerSortOrder} onChange={(e) => setBannerSortOrder(Number(e.target.value))} />
@@ -544,13 +670,13 @@ export default function Marketing() {
 
       {/* Category Form Dialog */}
       <Dialog open={showCategoryForm} onOpenChange={setShowCategoryForm}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCategory ? "تعديل الفئة" : "إضافة فئة"}</DialogTitle>
             <DialogDescription>{editingCategory ? "قم بتعديل بيانات الفئة" : "أضف فئة جديدة"}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Name (English)</Label>
                 <Input value={catName} onChange={(e) => setCatName(e.target.value)} />
@@ -563,7 +689,7 @@ export default function Marketing() {
 
             <div className="space-y-2">
               <Label>الأيقونة</Label>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {commonIcons.map(icon => (
                   <button
                     key={icon}
@@ -578,11 +704,28 @@ export default function Marketing() {
             </div>
 
             <div className="space-y-2">
+              <Label>صورة الفئة - الصفحة الرئيسية (صورة غلاف كاملة)</Label>
+              <p className="text-xs text-muted-foreground">تظهر كصورة غلاف كبيرة في قسم الفئات بالصفحة الرئيسية</p>
+              <Input value={catHomeImageUrl} onChange={(e) => setCatHomeImageUrl(e.target.value)} placeholder="https://..." />
+              {catHomeImageUrl && <img src={catHomeImageUrl} alt="" className="w-full h-24 object-cover rounded mt-2 ring-1 ring-black/5" />}
+            </div>
+
+            <div className="space-y-2">
+              <Label>أيقونة الفئة - صفحة البحث (أيقونة صغيرة)</Label>
+              <p className="text-xs text-muted-foreground">تظهر كأيقونة صغيرة دائرية في قسم الفئات بصفحة البحث</p>
+              <Input value={catSearchImageUrl} onChange={(e) => setCatSearchImageUrl(e.target.value)} placeholder="https://..." />
+              {catSearchImageUrl && (
+                <div className="flex justify-center mt-2">
+                  <img src={catSearchImageUrl} alt="" className="w-12 h-12 object-contain rounded-full ring-1 ring-black/5 bg-muted" />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label>الفئة الأب (اختياري)</Label>
-              <Select value={catParentId} onValueChange={setCatParentId}>
+              <Select value={catParentId || undefined} onValueChange={(v) => setCatParentId(v || "")}>
                 <SelectTrigger><SelectValue placeholder="بدون" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">بدون</SelectItem>
                   {categories.filter(c => c.id !== editingCategory?.id).map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.nameAr}</SelectItem>
                   ))}
@@ -590,7 +733,7 @@ export default function Marketing() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الترتيب</Label>
                 <Input type="number" value={catSortOrder} onChange={(e) => setCatSortOrder(Number(e.target.value))} />

@@ -9,6 +9,7 @@ import {
   BarChart3,
   PackageSearch,
   Bell,
+  Settings,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/inventory", label: "المخزون", icon: PackageSearch },
   { href: "/marketing", label: "التسويق", icon: Palette },
   { href: "/notifications", label: "الإشعارات", icon: Bell },
+  { href: "/settings", label: "الإعدادات", icon: Settings },
 ];
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
@@ -98,7 +100,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           "transition-all duration-400 will-change-transform",
           open
             ? "translate-x-0 opacity-100 scale-100"
-            : "translate-x-full opacity-0 scale-95 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:scale-100 lg:pointer-events-auto lg:w-0 lg:overflow-hidden"
+            : "translate-x-full opacity-0 scale-95 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:scale-100 lg:pointer-events-auto"
         )}
         style={{
           transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",

@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Send, Trash2, Bell, Users, User, Loader2, Info, ChevronDown, Search, Check } from "lucide-react";
+import { Plus, Send, Trash2, Bell, Users, User, Loader2, ChevronDown, Search, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 const typeBadge: Record<string, { label: string; style: string }> = {
   info: { label: "معلومات", style: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -265,64 +266,94 @@ export default function Notifications() {
           </CardContent>
         </Card>
       ) : (
-        <Card borderless className="shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="text-right font-semibold text-foreground/70">العنوان</TableHead>
-                <TableHead className="text-right font-semibold text-foreground/70">النوع</TableHead>
-                <TableHead className="text-right font-semibold text-foreground/70">الهدف</TableHead>
-                <TableHead className="text-right font-semibold text-foreground/70">المستلمون</TableHead>
-                <TableHead className="text-right font-semibold text-foreground/70">التاريخ</TableHead>
-                <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <ResponsiveTable
+          desktop={
+            <Card borderless className="shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-right font-semibold text-foreground/70">العنوان</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground/70">النوع</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground/70">الهدف</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground/70">المستلمون</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground/70">التاريخ</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground/70">إجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {broadcasts.map((item) => (
+                    <TableRow key={`${item.title}-${item.createdAt}`} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{item.titleAr || item.title}</span>
+                          <span className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.bodyAr || item.body}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn("font-medium border", typeBadge[item.type]?.style)} variant="outline">
+                          {typeBadge[item.type]?.label || item.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>الكل</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-number font-medium">{item.recipientCount}</span>
+                        <span className="text-xs text-muted-foreground mr-1">مستخدم</span>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="hover:bg-destructive/10" onClick={() => deleteBroadcast(item)}>
+                          <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          }
+          mobile={
+            <div className="space-y-3">
               {broadcasts.map((item) => (
-                <TableRow key={`${item.title}-${item.createdAt}`} className="hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span>{item.titleAr || item.title}</span>
-                      <span className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.bodyAr || item.body}</span>
+                <Card key={`${item.title}-${item.createdAt}`} borderless className="shadow-sm overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{item.titleAr || item.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.bodyAr || item.body}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hover:bg-destructive/10" onClick={() => deleteBroadcast(item)}>
+                        <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
+                      </Button>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn("font-medium border", typeBadge[item.type]?.style)} variant="outline">
-                      {typeBadge[item.type]?.label || item.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Users className="w-3.5 h-3.5" />
-                      <span>الكل</span>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <Badge className={cn("text-[10px] font-medium border", typeBadge[item.type]?.style)} variant="outline">
+                        {typeBadge[item.type]?.label || item.type}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" />{item.recipientCount}</span>
+                      <span className="text-xs text-muted-foreground mr-auto">{formatDate(item.createdAt)}</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-number font-medium">{item.recipientCount}</span>
-                    <span className="text-xs text-muted-foreground mr-1">مستخدم</span>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="hover:bg-destructive/10" onClick={() => deleteBroadcast(item)}>
-                      <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </CardContent>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
-        </Card>
+            </div>
+          }
+        />
       )}
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>إرسال إشعار جديد</DialogTitle>
             <DialogDescription>سيتم إرسال الإشعار لجميع المستخدمين أو لمستخدم محدد</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>العنوان (العربية) *</Label>
                 <Input value={titleAr} onChange={(e) => setTitleAr(e.target.value)} placeholder="عنوان الإشعار" />
@@ -333,7 +364,7 @@ export default function Notifications() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>المحتوى (العربية) *</Label>
                 <Textarea value={bodyAr} onChange={(e) => setBodyAr(e.target.value)} placeholder="نص الإشعار" className="min-h-[80px]" />

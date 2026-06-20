@@ -5,7 +5,7 @@ import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, TrendingUp, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Calendar, TrendingUp, ArrowUp, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SkeletonTable } from "@/components/ui/skeleton";
 

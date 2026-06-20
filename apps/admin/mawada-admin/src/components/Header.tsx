@@ -1,5 +1,6 @@
 import { Bell, Menu, Search, Command } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick, sidebarOpen, onCmdOpen }: HeaderProps) {
   const [showSearch, setShowSearch] = useState(false);
+  const [, setLocation] = useLocation();
 
   return (
     <header className="h-16 bg-card/80 backdrop-blur-xl border-b border-border/60 flex items-center px-5 gap-3 shrink-0 sticky top-0 z-10 safe-area-top">
@@ -59,7 +61,10 @@ export default function Header({ onMenuClick, sidebarOpen, onCmdOpen }: HeaderPr
       )}
 
       <div className="flex items-center gap-1 mr-auto">
-        <button className="relative p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-muted/70 transition-all text-muted-foreground/60 hover:text-foreground group active:scale-95">
+        <button
+          onClick={() => setLocation("/notifications")}
+          className="relative p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-muted/70 transition-all text-muted-foreground/60 hover:text-foreground group active:scale-95"
+        >
           <Bell className="w-4.5 h-4.5" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full ring-2 ring-card/80" />
         </button>
