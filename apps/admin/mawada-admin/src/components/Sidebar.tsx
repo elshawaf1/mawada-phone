@@ -79,6 +79,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
+
   return (
     <>
       <div
@@ -97,14 +99,20 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           "bg-gradient-to-b from-[#0B1120] via-[#0F1A2E] to-[#0B1120]",
           "text-white flex flex-col",
           "shadow-2xl shadow-black/30 lg:shadow-none lg:border-l lg:border-white/[0.04]",
-          "transition-all duration-400 will-change-transform",
-          open
-            ? "translate-x-0 opacity-100 scale-100"
-            : "translate-x-full opacity-0 scale-95 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:scale-100 lg:pointer-events-auto"
+          "will-change-transform",
+          !open && "pointer-events-none"
         )}
         style={{
-          transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-          transform: swipeOffset ? `translateX(calc(var(--tw-translate-x, 0px) + ${swipeOffset}px))` : undefined,
+          transition: "all 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+          transform: isDesktop
+            ? undefined
+            : open
+              ? "translateX(0)"
+              : swipeOffset
+                ? `translateX(${swipeOffset}px)`
+                : "translateX(-110%)",
+          opacity: isDesktop ? 1 : open ? 1 : 0,
+          scale: isDesktop ? undefined : open ? "1" : "0.95",
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
