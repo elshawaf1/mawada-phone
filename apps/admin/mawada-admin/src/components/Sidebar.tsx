@@ -35,6 +35,16 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const [location] = useLocation();
   const [mounted, setMounted] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= 1024
+  );
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!open) return;
@@ -47,7 +57,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const touch = e.touches[0];
     const startX = Number((e.currentTarget as HTMLElement).dataset.touchStartX || touch.clientX);
     const diff = touch.clientX - startX;
-    // In RTL, swiping left (negative diff) means dragging sidebar to close
     if (diff < 0) {
       setSwipeOffset(Math.max(diff, -150));
     }
@@ -79,41 +88,52 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
-  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
+  const showSidebar = isDesktop || mounted;
+
+  if (!showSidebar) return null;
 
   return (
     <>
-      <div
-        className={cn(
-          "fixed inset-0 z-20 lg:hidden transition-all duration-400",
-          open
-            ? "bg-black/70 backdrop-blur-md opacity-100"
-            : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
-        )}
-        style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
-        onClick={onClose}
-      />
+      {/* Backdrop overlay - only on mobile */}
+      {!isDesktop && (
+        <div
+          className={cn(
+            "fixed inset-0 z-20 transition-all duration-400",
+            open
+              ? "bg-black/70 backdrop-blur-md opacity-100"
+              : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
+          )}
+          style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:static inset-y-0 right-0 z-30 w-64",
+          isDesktop
+            ? "lg:static inset-y-0 right-0 z-30 w-64"
+            : "fixed inset-y-0 right-0 z-30 w-64",
           "bg-gradient-to-b from-[#0B1120] via-[#0F1A2E] to-[#0B1120]",
           "text-white flex flex-col",
           "shadow-2xl shadow-black/30 lg:shadow-none lg:border-l lg:border-white/[0.04]",
           "will-change-transform",
-          !open && "pointer-events-none"
+          !open && !isDesktop && "pointer-events-none"
         )}
-        style={{
-          transition: "all 400ms cubic-bezier(0.16, 1, 0.3, 1)",
-          transform: isDesktop
+        style={
+          isDesktop
             ? undefined
-            : open
-              ? "translateX(0)"
-              : swipeOffset
-                ? `translateX(${swipeOffset}px)`
-                : "translateX(-110%)",
-          opacity: isDesktop ? 1 : open ? 1 : 0,
-          scale: isDesktop ? undefined : open ? "1" : "0.95",
-        }}
+            : {
+                transition: "transform 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+                transform: open
+                  ? "translateX(0)"
+                  : swipeOffset
+                    ? `translateX(${swipeOffset}px)`
+                    : "translateX(-110%)",
+                opacity: open ? 1 : 0,
+                scale: open ? "1" : "0.95",
+              }
+        }
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -134,16 +154,14 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 <p className="text-[10px] text-white/30 font-medium tracking-wider uppercase">لوحة الإدارة</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className={cn(
-                "lg:hidden p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-all duration-300",
-                "text-white/30 hover:text-white hover:bg-white/[0.08]",
-                "hover:rotate-90 active:scale-90"
-              )}
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {!isDesktop && (
+              <button
+                onClick={onClose}
+                className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-all duration-300 text-white/30 hover:text-white hover:bg-white/[0.08] hover:rotate-90 active:scale-90"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -184,7 +202,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                     : "text-white/35 hover:text-white/70"
                 )}
                 style={{
-                  animation: open && mounted
+                  animation: open && mounted && !isDesktop
                     ? `navSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 0.035}s both`
                     : "none",
                 }}
