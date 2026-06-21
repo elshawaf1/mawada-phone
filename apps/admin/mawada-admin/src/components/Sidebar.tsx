@@ -136,17 +136,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         onTouchEnd={handleTouchEnd}
       >
         {/* Logo */}
-        <div className="px-6 pt-7 pb-5">
+        <div className="px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-[10px] flex items-center justify-center bg-gradient-to-br from-[#008060] to-[#006f52] shadow-lg shadow-[#008060]/20">
-                <span className="text-white font-bold text-sm">م</span>
-              </div>
-              <div>
-                <h1 className="text-[13px] font-semibold text-white/90 tracking-wide">مودة فون</h1>
-                <p className="text-[10px] text-white/25 font-medium tracking-wide">لوحة الإدارة</p>
-              </div>
-            </div>
+            <img
+              src="/logo.png"
+              alt="مودة فون"
+              className="h-10 w-auto object-contain"
+            />
             {!isDesktop && (
               <button
                 onClick={onClose}
