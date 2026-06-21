@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye, Copy } from "lucide-react";
+import { Plus, Search, Edit, Trash2, X, ImagePlus, Loader2, MoreHorizontal, Package, Tag, AlertTriangle, TrendingUp, EyeOff, Eye, Copy, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -91,6 +91,7 @@ export default function Products() {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [specs, setSpecs] = useState<Spec[]>([]);
   const [currentGroupName, setCurrentGroupName] = useState("");
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => { fetchData(); }, []);
 
@@ -425,6 +426,27 @@ export default function Products() {
     const updated = [...specs];
     updated[i] = { ...updated[i], [key]: value };
     setSpecs(updated);
+  };
+
+  const getGroupedSpecs = () => {
+    const groups: Record<string, Spec[]> = {};
+    specs.forEach((s, i) => {
+      const group = s.groupName || "Other";
+      if (!groups[group]) groups[group] = [];
+      groups[group].push({ ...s, _index: i } as any);
+    });
+    return groups;
+  };
+  const toggleGroup = (name: string) => setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
+  const addSpecToGroup = (groupName: string) => {
+    setSpecs([...specs, { groupName, key: "", value: "", sortOrder: specs.length, _isNew: true }]);
+    setOpenGroups(prev => ({ ...prev, [groupName]: true }));
+  };
+  const removeGroup = (groupName: string) => {
+    setSpecs(specs.filter(s => s.groupName !== groupName));
+  };
+  const updateGroupName = (oldName: string, newName: string) => {
+    setSpecs(specs.map(s => s.groupName === oldName ? { ...s, groupName: newName } : s));
   };
 
   const activeCount = products.filter(p => p.isActive).length;
@@ -1059,55 +1081,108 @@ export default function Products() {
             </TabsContent>
 
             <TabsContent value="specs" className="space-y-4 mt-4">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={addSpec} size="sm" className="rounded-xl">
-                  <Plus className="w-4 h-4 ml-1" /> إضافة مواصفة
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button variant="outline" onClick={() => { const name = currentGroupName.trim(); if (name) { addSpecToGroup(name); setCurrentGroupName(""); } }} size="sm" className="rounded-xl" disabled={!currentGroupName.trim()}>
+                  <Plus className="w-4 h-4 ml-1" /> إضافة مجموعة
                 </Button>
-                <span className="text-xs text-muted-foreground">{specs.length} مواصفة</span>
+                <Input
+                  placeholder="اسم المجموعة (مثال: الشاشة، البطارية، المعالج)"
+                  value={currentGroupName}
+                  onChange={(e) => setCurrentGroupName(e.target.value)}
+                  className="h-8 text-xs flex-1 min-w-[200px] bg-white/50"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const name = currentGroupName.trim(); if (name) { addSpecToGroup(name); setCurrentGroupName(""); } } }}
+                />
+                <span className="text-xs text-muted-foreground">{specs.length} مواصفة في {Object.keys(getGroupedSpecs()).length} مجموعة</span>
               </div>
+
               {specs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground/60 border border-dashed rounded-xl">
-                  <p className="text-sm">لم يتم إضافة مواصفات بعد</p>
-                  <p className="text-xs mt-1">أضف مواصفات المنتج مثل الشاشة، المعالج، الذاكرة...</p>
+                <div className="text-center py-10 text-muted-foreground/60 border border-dashed rounded-xl">
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm font-medium">لم يتم إضافة مواصفات بعد</p>
+                  <p className="text-xs mt-1">اكتب اسم المجموعة ثم اضغط إضافة لمجموعة جديدة</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 px-3">
-                    <Input placeholder="المجموعة" value={currentGroupName} onChange={(e) => setCurrentGroupName(e.target.value)} className="col-span-3 text-xs h-8 bg-muted/50" />
-                    <Input placeholder="المفتاح (مثال: الشاشة)" className="col-span-4 text-xs h-8 bg-muted/50" disabled />
-                    <Input placeholder="القيمة (مثال: 6.7 inches)" className="col-span-4 text-xs h-8 bg-muted/50" disabled />
-                    <div className="col-span-1" />
-                  </div>
-                  {specs.map((s, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-center px-3 py-1.5 rounded-lg hover:bg-muted/30 transition-colors group">
-                      <Input
-                        placeholder="Display, Battery..."
-                        value={s.groupName}
-                        onChange={(e) => updateSpec(i, "groupName", e.target.value)}
-                        className="col-span-3 text-xs h-9 bg-white/50"
-                      />
-                      <Input
-                        placeholder="Screen Size"
-                        value={s.key}
-                        onChange={(e) => updateSpec(i, "key", e.target.value)}
-                        className="col-span-4 text-xs h-9 bg-white/50"
-                      />
-                      <Input
-                        placeholder="6.7 inches"
-                        value={s.value}
-                        onChange={(e) => updateSpec(i, "value", e.target.value)}
-                        className="col-span-4 text-xs h-9 bg-white/50"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeSpec(i)}
-                        className="col-span-1 h-8 w-8 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-opacity"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  {Object.entries(getGroupedSpecs()).map(([groupName, groupSpecs]) => {
+                    const isOpen = openGroups[groupName] !== false;
+                    return (
+                      <div key={groupName} className="border border-border/50 rounded-xl overflow-hidden bg-card">
+                        {/* Group Header */}
+                        <div
+                          className="flex items-center gap-2 px-4 py-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                          onClick={() => toggleGroup(groupName)}
+                        >
+                          <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <Input
+                              value={groupName}
+                              onChange={(e) => { e.stopPropagation(); updateGroupName(groupName, e.target.value); }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-7 text-sm font-semibold border-none bg-transparent p-0 focus-visible:ring-0 shadow-none"
+                            />
+                          </div>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">{groupSpecs.length}</Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); removeGroup(groupName); }}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                          {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                        </div>
+
+                        {/* Group Content */}
+                        {isOpen && (
+                          <div className="px-4 py-3 space-y-2">
+                            {/* Column Headers */}
+                            <div className="grid grid-cols-12 gap-2 px-1">
+                              <span className="col-span-5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">المفتاح</span>
+                              <span className="col-span-6 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">القيمة</span>
+                              <span className="col-span-1" />
+                            </div>
+                            {/* Spec Rows */}
+                            {groupSpecs.map((s) => {
+                              const idx = (s as any)._index;
+                              return (
+                                <div key={idx} className="grid grid-cols-12 gap-2 items-center group/row">
+                                  <Input
+                                    placeholder="مثال: حجم الشاشة"
+                                    value={s.key}
+                                    onChange={(e) => updateSpec(idx, "key", e.target.value)}
+                                    className="col-span-5 text-xs h-9 bg-white/50"
+                                  />
+                                  <Input
+                                    placeholder="مثال: 6.7 inches"
+                                    value={s.value}
+                                    onChange={(e) => updateSpec(idx, "value", e.target.value)}
+                                    className="col-span-6 text-xs h-9 bg-white/50"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeSpec(idx)}
+                                    className="col-span-1 h-8 w-8 opacity-0 group-hover/row:opacity-100 hover:bg-red-50 hover:text-red-500 transition-opacity"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => addSpecToGroup(groupName)}
+                              className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 hover:border-border rounded-lg h-8"
+                            >
+                              <Plus className="w-3 h-3 ml-1" /> إضافة صف
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
