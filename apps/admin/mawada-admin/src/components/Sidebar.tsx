@@ -136,22 +136,22 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         onTouchEnd={handleTouchEnd}
       >
         {/* Logo */}
-        <div className="px-5 pt-6 pb-4">
-          <div className="flex items-center justify-between">
-            <img
-              src="/logo.png"
-              alt="مودة فون"
-              className="h-10 w-auto object-contain"
-            />
-            {!isDesktop && (
-              <button
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.05] transition-all duration-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+        {!isDesktop && (
+          <div className="flex justify-end px-5 pt-4">
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.05] transition-all duration-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
+        )}
+        <div className="px-5 pb-4 flex justify-center">
+          <img
+            src="/logo.png"
+            alt="مودة فون"
+            className="h-20 w-auto object-contain"
+          />
         </div>
 
         {/* Divider */}
