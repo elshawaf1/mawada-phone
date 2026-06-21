@@ -3,16 +3,12 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Info, TrendingUp, TrendingDown } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { cn } from "@/lib/utils";
 import { SkeletonChart } from "@/components/ui/skeleton";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
-const paymentMethodLabels: Record<string, string> = {
-  VISA: "فيزا", WALLET: "محفظة", COD: "عند الاستلام", BRANCH: "الفرع",
-};
-
-const DONUT_COLORS = ["#0055FF", "#10B981", "#8B5CF6", "#F59E0B", "#6B7280", "#EF4444"];
+const SHOPIFY_COLORS = ["#008060", "#5C6AC4", "#F49342", "#9C6ADE", "#DE3618", "#008060"];
 
 function InfoTooltip({ text }: { text: string }) {
   return (
@@ -28,11 +24,11 @@ function InfoTooltip({ text }: { text: string }) {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white/95 backdrop-blur-sm border border-border/60 rounded-xl px-4 py-3 shadow-lg">
-      <p className="text-xs text-muted-foreground mb-2">{label}</p>
+    <div className="bg-white/95 backdrop-blur-md border-0 rounded-xl px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
+      <p className="text-[10px] text-muted-foreground/60 mb-1.5 font-medium">{label}</p>
       {payload.map((entry: any, idx: number) => (
-        <p key={idx} className="text-sm font-medium font-number" style={{ color: entry.color }}>
-          {entry.name}: {Number(entry.value).toLocaleString("ar-EG")} ج
+        <p key={idx} className="text-sm font-bold font-number" style={{ color: entry.color }}>
+          {Number(entry.value).toLocaleString("ar-EG")} ج
         </p>
       ))}
     </div>
@@ -45,45 +41,48 @@ function LineChartCard({
   data,
   total,
   prevTotal,
+  index,
 }: {
   title: string;
   tooltip: string;
   data: { date: string; current: number; previous: number }[];
   total: number;
   prevTotal: number;
+  index: number;
 }) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const pctChange = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : total > 0 ? 100 : 0;
-  const maxVal = Math.max(...data.map((d) => Math.max(d.current, d.previous)), 1);
-  const tickCount = data.length > 60 ? Math.ceil(data.length / 15) : data.length > 30 ? Math.ceil(data.length / 7) : Math.ceil(data.length / 5);
-  const skip = Math.max(1, Math.floor(data.length / 10));
+  const skip = Math.max(1, Math.floor(data.length / (isMobile ? 4 : 8)));
+  const gradientId = `gradient-${index}`;
 
   return (
-    <Card borderless className="shadow-sm overflow-hidden">
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-center justify-between mb-1">
+    <Card borderless className="shadow-sm overflow-hidden chart-card-animate" style={{ animationDelay: `${index * 0.1}s` }}>
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold text-foreground">{title}</span>
             <InfoTooltip text={tooltip} />
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#0055FF]" />
-              <span className="text-[9px] text-muted-foreground/60">الحالي</span>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#008060]" />
+              <span className="text-[10px] text-muted-foreground/50 font-medium">الحالي</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#E5E7EB]" />
-              <span className="text-[9px] text-muted-foreground/60">السابق</span>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gray-300" />
+              <span className="text-[10px] text-muted-foreground/50 font-medium">السابق</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-baseline gap-2 mb-3">
-          <span className="text-xl sm:text-2xl font-bold font-number">{total.toLocaleString("ar-EG")} ج</span>
+        <div className="flex items-baseline gap-3 mb-5">
+          <span className="text-2xl sm:text-3xl font-bold font-number tracking-tight">
+            {total.toLocaleString("ar-EG")} <span className="text-base font-semibold text-muted-foreground/40">ج</span>
+          </span>
           {pctChange !== 0 && (
             <span className={cn(
-              "flex items-center gap-0.5 text-xs font-medium font-number",
-              pctChange >= 0 ? "text-emerald-600" : "text-red-600"
+              "inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full font-number",
+              pctChange >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
             )}>
               {pctChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {pctChange >= 0 ? "+" : ""}{pctChange}%
@@ -91,31 +90,54 @@ function LineChartCard({
           )}
         </div>
 
-        <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
-          <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+        <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
+          <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#008060" stopOpacity={0.12} />
+                <stop offset="100%" stopColor="#008060" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <XAxis
               dataKey="date"
-              angle={-90}
-              textAnchor="end"
-              fontSize={9}
-              tick={{ fill: "hsl(var(--muted-foreground))" }}
+              fontSize={10}
+              tick={{ fill: "hsl(var(--muted-foreground) / 0.5)" }}
               axisLine={false}
               tickLine={false}
-              height={70}
+              tickMargin={8}
               interval={skip - 1}
             />
-            <YAxis
-              fontSize={9}
-              tick={{ fill: "hsl(var(--muted-foreground))" }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v: number) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
+            <YAxis hide />
+            <Tooltip
+              content={<ChartTooltip />}
+              cursor={{ stroke: "#008060", strokeDasharray: "4 4", strokeWidth: 1, strokeOpacity: 0.3 }}
             />
-            <Tooltip content={<ChartTooltip />} />
-            <Line type="monotone" dataKey="current" stroke="#0055FF" strokeWidth={2.5} dot={false} name="الحالي" />
-            <Line type="monotone" dataKey="previous" stroke="#E5E7EB" strokeWidth={2} dot={false} name="السابق" />
-          </LineChart>
+            <Area
+              type="basis"
+              dataKey="previous"
+              stroke="#d1d5db"
+              strokeWidth={1.5}
+              fill="none"
+              strokeDasharray="4 4"
+              dot={false}
+              activeDot={false}
+              name="السابق"
+              animationDuration={1200}
+              animationEasing="ease-out"
+            />
+            <Area
+              type="basis"
+              dataKey="current"
+              stroke="#008060"
+              strokeWidth={2.5}
+              fill={`url(#${gradientId})`}
+              dot={false}
+              activeDot={{ r: 5, stroke: "#008060", strokeWidth: 2, fill: "#fff" }}
+              name="الحالي"
+              animationDuration={1200}
+              animationEasing="ease-out"
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
@@ -124,29 +146,43 @@ function LineChartCard({
 
 function TopProductsCard({ products }: { products: { id: string; nameAr: string; soldCount: number }[] }) {
   const maxSold = products.length > 0 ? Math.max(...products.map((p) => p.soldCount)) : 0;
+
   return (
-    <Card borderless className="shadow-sm">
-      <CardHeader className="pb-2">
+    <Card borderless className="shadow-sm chart-card-animate" style={{ animationDelay: "0.2s" }}>
+      <CardHeader className="pb-3">
         <CardTitle className="text-sm">الأكثر مبيعاً</CardTitle>
         <CardDescription>أفضل 5 منتجات</CardDescription>
       </CardHeader>
-      <CardContent className="pt-0 space-y-3">
+      <CardContent className="pt-0 space-y-3.5">
         {products.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">لا توجد بيانات</p>
         ) : products.map((p, idx) => {
-          const pct = maxSold > 0 ? Math.round((p.soldCount / maxSold) * 100) : 0;
+          const pct = maxSold > 0 ? (p.soldCount / maxSold) * 100 : 0;
+          const barColors = ["bg-[#008060]", "bg-[#5C6AC4]", "bg-[#F49342]", "bg-[#9C6ADE]", "bg-gray-400"];
+          const dotColors = ["bg-emerald-100 text-emerald-700", "bg-indigo-100 text-indigo-700", "bg-amber-100 text-amber-700", "bg-purple-100 text-purple-700", "bg-gray-100 text-gray-500"];
           return (
-            <div key={p.id} className="flex items-center gap-2">
-              <span className={cn(
-                "w-5 h-5 rounded-full text-[9px] font-bold font-number flex items-center justify-center shrink-0",
-                idx === 0 ? "bg-emerald-100 text-emerald-700" : idx === 1 ? "bg-blue-100 text-blue-700" : idx === 2 ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
-              )}>{idx + 1}</span>
-              <span className="flex-1 text-xs truncate">{p.nameAr}</span>
-              <div className="w-16 h-1.5 bg-muted/60 rounded-full overflow-hidden">
-                <div className={cn("h-full rounded-full", idx === 0 ? "bg-emerald-500" : idx === 1 ? "bg-blue-500" : idx === 2 ? "bg-amber-500" : "bg-primary/40")}
-                  style={{ width: `${pct}%` }} />
+            <div key={p.id} className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={cn(
+                    "w-5 h-5 rounded-full text-[9px] font-bold font-number flex items-center justify-center shrink-0",
+                    dotColors[idx] || dotColors[4]
+                  )}>{idx + 1}</span>
+                  <span className="text-xs font-medium truncate">{p.nameAr}</span>
+                </div>
+                <span className="text-[10px] font-number font-semibold text-muted-foreground/70 shrink-0 mr-2">
+                  {p.soldCount} قطعة
+                </span>
               </div>
-              <span className="text-[9px] font-number text-muted-foreground w-7 text-left">{pct}%</span>
+              <div className="h-2 bg-[#f1f3f5] rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full rounded-full chart-bar-animate", barColors[idx] || barColors[4])}
+                  style={{
+                    width: `${pct}%`,
+                    animationDelay: `${0.3 + idx * 0.1}s`,
+                  }}
+                />
+              </div>
             </div>
           );
         })}
@@ -157,58 +193,53 @@ function TopProductsCard({ products }: { products: { id: string; nameAr: string;
 
 function MethodsDonutsCard({
   currentData,
-  prevData,
 }: {
   currentData: { method: string; count: number }[];
-  prevData: { method: string; count: number }[];
 }) {
+  const total = currentData.reduce((s, d) => s + d.count, 0);
+  const paymentLabels: Record<string, string> = {
+    VISA: "فيزا", WALLET: "محفظة", COD: "عند الاستلام", BRANCH: "الفرع",
+  };
+
   return (
-    <Card borderless className="shadow-sm">
+    <Card borderless className="shadow-sm chart-card-animate" style={{ animationDelay: "0.3s" }}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">طرق الدفع</CardTitle>
-        <CardDescription>مقارنة الفترتين</CardDescription>
+        <CardDescription>توزيع الطرق الحالية</CardDescription>
       </CardHeader>
       <CardContent className="pt-0 flex flex-col items-center">
-        <div className="flex items-center justify-center gap-4 sm:gap-8 py-2">
-          <div className="relative">
-            <ResponsiveContainer width={110} height={110}>
-              <PieChart>
-                <Pie data={currentData.length > 0 ? currentData : [{ method: "لا توجد", count: 1 }]}
-                  dataKey="count" cx="50%" cy="50%" innerRadius={32} outerRadius={50} paddingAngle={2}>
-                  {currentData.map((_, idx) => (
-                    <Cell key={idx} fill={DONUT_COLORS[idx % DONUT_COLORS.length]} />
-                  ))}
-                  {currentData.length === 0 && <Cell fill="#E5E7EB" />}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="text-[9px] font-bold text-foreground">الحالي</span>
-            </div>
-          </div>
-          <div className="relative">
-            <ResponsiveContainer width={110} height={110}>
-              <PieChart>
-                <Pie data={prevData.length > 0 ? prevData : [{ method: "لا توجد", count: 1 }]}
-                  dataKey="count" cx="50%" cy="50%" innerRadius={32} outerRadius={50} paddingAngle={2}>
-                  {prevData.map((_, idx) => (
-                    <Cell key={idx} fill={DONUT_COLORS[idx % DONUT_COLORS.length]} fillOpacity={0.25} />
-                  ))}
-                  {prevData.length === 0 && <Cell fill="#E5E7EB" fillOpacity={0.25} />}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="text-[9px] font-bold text-muted-foreground">السابق</span>
-            </div>
+        <div className="relative py-2">
+          <ResponsiveContainer width={isMobile ? 160 : 200} height={isMobile ? 160 : 200}>
+            <PieChart>
+              <Pie
+                data={currentData.length > 0 ? currentData : [{ method: "لا توجد", count: 1 }]}
+                dataKey="count"
+                cx="50%"
+                cy="50%"
+                innerRadius={isMobile ? 48 : 65}
+                outerRadius={isMobile ? 72 : 95}
+                paddingAngle={3}
+                strokeWidth={0}
+              >
+                {currentData.map((_, idx) => (
+                  <Cell key={idx} fill={SHOPIFY_COLORS[idx % SHOPIFY_COLORS.length]} />
+                ))}
+                {currentData.length === 0 && <Cell fill="#e5e7eb" />}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-2xl font-bold font-number">{total}</span>
+            <span className="text-[10px] text-muted-foreground/50 font-medium">طلب</span>
           </div>
         </div>
         {currentData.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 mt-2">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-3">
             {currentData.map((d, idx) => (
               <div key={d.method} className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }} />
-                <span className="text-[10px] text-muted-foreground">{paymentMethodLabels[d.method] || d.method}</span>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: SHOPIFY_COLORS[idx % SHOPIFY_COLORS.length] }} />
+                <span className="text-[10px] text-muted-foreground/60">{paymentLabels[d.method] || d.method}</span>
+                <span className="text-[10px] font-number font-semibold">{d.count}</span>
               </div>
             ))}
           </div>
@@ -231,7 +262,6 @@ export default function Dashboard() {
   const [prevNetSales, setPrevNetSales] = useState(0);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [currentMethods, setCurrentMethods] = useState<any[]>([]);
-  const [prevMethods, setPrevMethods] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -316,7 +346,6 @@ export default function Dashboard() {
       };
 
       setCurrentMethods(countMethods(currentOrders));
-      setPrevMethods(countMethods(prevOrders));
     } catch (error: any) {
       console.error("Dashboard error:", error);
     } finally {
@@ -366,10 +395,10 @@ export default function Dashboard() {
         <LineChartCard
           title="إجمالي الإيرادات"
           tooltip="إجمالي قيمة الطلبات المدفوعة قبل الخصومات"
-
           data={dailyRevenue}
           total={totalSales}
           prevTotal={prevTotalSales}
+          index={0}
         />
         <LineChartCard
           title="صافي الإيرادات"
@@ -377,9 +406,10 @@ export default function Dashboard() {
           data={dailyNetRevenue}
           total={netSales}
           prevTotal={prevNetSales}
+          index={1}
         />
         <TopProductsCard products={topProducts} />
-        <MethodsDonutsCard currentData={currentMethods} prevData={prevMethods} />
+        <MethodsDonutsCard currentData={currentMethods} />
       </div>
     </div>
   );
