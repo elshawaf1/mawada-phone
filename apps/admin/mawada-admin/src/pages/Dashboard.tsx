@@ -193,8 +193,10 @@ function TopProductsCard({ products }: { products: { id: string; nameAr: string;
 
 function MethodsDonutsCard({
   currentData,
+  isMobile,
 }: {
   currentData: { method: string; count: number }[];
+  isMobile: boolean;
 }) {
   const total = currentData.reduce((s, d) => s + d.count, 0);
   const paymentLabels: Record<string, string> = {
@@ -409,7 +411,7 @@ export default function Dashboard() {
           index={1}
         />
         <TopProductsCard products={topProducts} />
-        <MethodsDonutsCard currentData={currentMethods} />
+        <MethodsDonutsCard currentData={currentMethods} isMobile={isMobile} />
       </div>
     </div>
   );
