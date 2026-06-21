@@ -90,6 +90,7 @@ export default function Products() {
   const [images, setImages] = useState<{ id?: string; url: string; isPrimary: boolean; sortOrder: number; file?: File }[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [specs, setSpecs] = useState<Spec[]>([]);
+  const [currentGroupName, setCurrentGroupName] = useState("");
 
   useEffect(() => { fetchData(); }, []);
 
@@ -418,7 +419,7 @@ export default function Products() {
   const updateVariant = (variantId: string, key: keyof Variant, value: any) => {
     setVariants(variants.map((v) => getVariantId(v) === variantId ? { ...v, [key]: value } : v));
   };
-  const addSpec = () => setSpecs([...specs, { groupName: "", key: "", value: "", sortOrder: specs.length, _isNew: true }]);
+  const addSpec = () => setSpecs([...specs, { groupName: currentGroupName, key: "", value: "", sortOrder: specs.length, _isNew: true }]);
   const removeSpec = (i: number) => setSpecs(specs.filter((_, idx) => idx !== i));
   const updateSpec = (i: number, key: keyof Spec, value: any) => {
     const updated = [...specs];
@@ -1058,28 +1059,53 @@ export default function Products() {
             </TabsContent>
 
             <TabsContent value="specs" className="space-y-4 mt-4">
-              <Button variant="outline" onClick={addSpec} size="sm" className="rounded-xl">
-                <Plus className="w-4 h-4 ml-1" /> إضافة مواصفة
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={addSpec} size="sm" className="rounded-xl">
+                  <Plus className="w-4 h-4 ml-1" /> إضافة مواصفة
+                </Button>
+                <span className="text-xs text-muted-foreground">{specs.length} مواصفة</span>
+              </div>
               {specs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground/60">
+                <div className="text-center py-8 text-muted-foreground/60 border border-dashed rounded-xl">
                   <p className="text-sm">لم يتم إضافة مواصفات بعد</p>
+                  <p className="text-xs mt-1">أضف مواصفات المنتج مثل الشاشة، المعالج، الذاكرة...</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="grid grid-cols-12 gap-2 px-3">
+                    <Input placeholder="المجموعة" value={currentGroupName} onChange={(e) => setCurrentGroupName(e.target.value)} className="col-span-3 text-xs h-8 bg-muted/50" />
+                    <Input placeholder="المفتاح (مثال: الشاشة)" className="col-span-4 text-xs h-8 bg-muted/50" disabled />
+                    <Input placeholder="القيمة (مثال: 6.7 inches)" className="col-span-4 text-xs h-8 bg-muted/50" disabled />
+                    <div className="col-span-1" />
+                  </div>
                   {specs.map((s, i) => (
-                    <div key={i} className="bg-muted/20 rounded-xl p-4 border border-border/40 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">مواصفة {i + 1}</span>
-                        <Button variant="ghost" size="icon" onClick={() => removeSpec(i)} className="h-7 w-7 hover:bg-red-50 hover:text-red-500">
-                          <X className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <Input placeholder="المجموعة (Display...)" value={s.groupName} onChange={(e) => updateSpec(i, "groupName", e.target.value)} className="bg-white/50" />
-                        <Input placeholder="المفتاح (Screen Size...)" value={s.key} onChange={(e) => updateSpec(i, "key", e.target.value)} className="bg-white/50" />
-                        <Input placeholder="القيمة (6.7 inches...)" value={s.value} onChange={(e) => updateSpec(i, "value", e.target.value)} className="bg-white/50" />
-                      </div>
+                    <div key={i} className="grid grid-cols-12 gap-2 items-center px-3 py-1.5 rounded-lg hover:bg-muted/30 transition-colors group">
+                      <Input
+                        placeholder="Display, Battery..."
+                        value={s.groupName}
+                        onChange={(e) => updateSpec(i, "groupName", e.target.value)}
+                        className="col-span-3 text-xs h-9 bg-white/50"
+                      />
+                      <Input
+                        placeholder="Screen Size"
+                        value={s.key}
+                        onChange={(e) => updateSpec(i, "key", e.target.value)}
+                        className="col-span-4 text-xs h-9 bg-white/50"
+                      />
+                      <Input
+                        placeholder="6.7 inches"
+                        value={s.value}
+                        onChange={(e) => updateSpec(i, "value", e.target.value)}
+                        className="col-span-4 text-xs h-9 bg-white/50"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSpec(i)}
+                        className="col-span-1 h-8 w-8 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-opacity"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   ))}
                 </div>
