@@ -33,7 +33,7 @@ export default function Login() {
       <div className="w-full max-w-[380px] relative z-10">
         <div className="text-center mb-10">
           <h1 className="text-[28px] font-semibold text-white tracking-tight" style={{ fontFamily: "'Inter', 'Tajawal', sans-serif" }}>
-            موعدة فون
+            موده فون
           </h1>
           <p className="text-[#64748B] text-[13px] mt-1.5 tracking-wide">لوحة تحكم الإدارة</p>
         </div>
