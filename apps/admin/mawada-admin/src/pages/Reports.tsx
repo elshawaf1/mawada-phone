@@ -360,7 +360,7 @@ export default function Reports() {
                   cursor={{ stroke: "#008060", strokeDasharray: "4 4", strokeWidth: 1, strokeOpacity: 0.3 }}
                 />
                 <Area
-                  type="basis"
+                  type="monotone"
                   dataKey="revenue"
                   stroke="#008060"
                   strokeWidth={2.5}

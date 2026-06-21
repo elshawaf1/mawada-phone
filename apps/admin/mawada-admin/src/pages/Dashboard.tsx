@@ -113,7 +113,7 @@ function LineChartCard({
               cursor={{ stroke: "#008060", strokeDasharray: "4 4", strokeWidth: 1, strokeOpacity: 0.3 }}
             />
             <Area
-              type="basis"
+              type="monotone"
               dataKey="previous"
               stroke="#d1d5db"
               strokeWidth={1.5}
@@ -126,7 +126,7 @@ function LineChartCard({
               animationEasing="ease-out"
             />
             <Area
-              type="basis"
+              type="monotone"
               dataKey="current"
               stroke="#008060"
               strokeWidth={2.5}
