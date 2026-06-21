@@ -15,8 +15,8 @@ export default function BottomNav() {
   const [location] = useLocation();
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card/90 backdrop-blur-xl border-t border-border/60 safe-area-bottom">
-      <div className="flex items-center justify-around h-14">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 backdrop-blur-xl border-t border-border/30 safe-area-bottom">
+      <div className="flex items-center justify-around h-[52px]">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = location === href;
           return (
@@ -24,27 +24,19 @@ export default function BottomNav() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] px-3 rounded-xl transition-all duration-200",
+                "flex flex-col items-center justify-center gap-[3px] min-w-[48px] min-h-[44px] px-2 rounded-lg transition-all duration-200",
                 isActive
-                  ? "text-primary"
-                  : "text-muted-foreground/50 hover:text-muted-foreground"
+                  ? "text-[#008060]"
+                  : "text-muted-foreground/40"
               )}
             >
-              <div className={cn(
-                "w-5 h-5 flex items-center justify-center transition-all duration-200",
-                isActive && "drop-shadow-[0_0_6px_rgba(59,130,246,0.4)]"
-              )}>
-                <Icon className="w-5 h-5" />
-              </div>
+              <Icon className="w-[18px] h-[18px]" />
               <span className={cn(
                 "text-[9px] font-medium transition-all duration-200",
-                isActive ? "opacity-100" : "opacity-60"
+                isActive ? "opacity-100" : "opacity-70"
               )}>
                 {label}
               </span>
-              {isActive && (
-                <div className="absolute -top-0.5 w-6 h-0.5 bg-primary rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-              )}
             </Link>
           );
         })}

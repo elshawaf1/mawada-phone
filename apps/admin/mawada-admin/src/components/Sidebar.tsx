@@ -98,9 +98,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       {!isDesktop && (
         <div
           className={cn(
-            "fixed inset-0 z-20 transition-all duration-400",
+            "fixed inset-0 z-20 transition-all duration-500",
             open
-              ? "bg-black/70 backdrop-blur-md opacity-100"
+              ? "bg-black/60 backdrop-blur-sm opacity-100"
               : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
           )}
           style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
@@ -112,11 +112,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       <aside
         className={cn(
           isDesktop
-            ? "lg:static inset-y-0 right-0 z-30 w-64"
-            : "fixed inset-y-0 right-0 z-30 w-64",
-          "bg-gradient-to-b from-[#0B1120] via-[#0F1A2E] to-[#0B1120]",
-          "text-white flex flex-col",
-          "shadow-2xl shadow-black/30 lg:shadow-none lg:border-l lg:border-white/[0.04]",
+            ? "lg:static inset-y-0 right-0 z-30 w-[260px]"
+            : "fixed inset-y-0 right-0 z-30 w-[280px]",
+          "bg-[#0a0f1a] text-white flex flex-col",
           "will-change-transform",
           !open && !isDesktop && "pointer-events-none"
         )}
@@ -124,14 +122,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           isDesktop
             ? undefined
             : {
-                transition: "transform 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+                transition: "transform 500ms cubic-bezier(0.16, 1, 0.3, 1), opacity 500ms cubic-bezier(0.16, 1, 0.3, 1)",
                 transform: open
                   ? "translateX(0)"
                   : swipeOffset
                     ? `translateX(${swipeOffset}px)`
                     : "translateX(-110%)",
                 opacity: open ? 1 : 0,
-                scale: open ? "1" : "0.95",
               }
         }
         onTouchStart={handleTouchStart}
@@ -139,25 +136,21 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         onTouchEnd={handleTouchEnd}
       >
         {/* Logo */}
-        <div className="relative p-5 pb-4">
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+        <div className="px-6 pt-7 pb-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 via-blue-500 to-sky-400 ring-1 ring-white/15">
-                  <span className="text-white font-black text-lg drop-shadow-sm">م</span>
-                </div>
-                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-[2px] border-[#0B1120] shadow-[0_0_8px_rgba(52,211,153,0.4)]" />
+              <div className="w-9 h-9 rounded-[10px] flex items-center justify-center bg-gradient-to-br from-[#008060] to-[#006f52] shadow-lg shadow-[#008060]/20">
+                <span className="text-white font-bold text-sm">م</span>
               </div>
               <div>
-                <h1 className="font-bold text-base text-white leading-tight tracking-wide">مودة فون</h1>
-                <p className="text-[10px] text-white/30 font-medium tracking-wider uppercase">لوحة الإدارة</p>
+                <h1 className="text-[13px] font-semibold text-white/90 tracking-wide">مودة فون</h1>
+                <p className="text-[10px] text-white/25 font-medium tracking-wide">لوحة الإدارة</p>
               </div>
             </div>
             {!isDesktop && (
               <button
                 onClick={onClose}
-                className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-all duration-300 text-white/30 hover:text-white hover:bg-white/[0.08] hover:rotate-90 active:scale-90"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.05] transition-all duration-200"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -165,29 +158,32 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         </div>
 
+        {/* Divider */}
+        <div className="mx-5 h-px bg-white/[0.06]" />
+
         {/* Admin Profile */}
-        <div className="mx-3 mt-3 group">
-          <div className="relative p-3 rounded-xl overflow-hidden bg-white/[0.04] border border-white/[0.06] backdrop-blur-sm">
-            <div className="absolute inset-0 bg-gradient-to-l from-blue-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative flex items-center gap-3">
-              <div className="relative shrink-0">
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-sky-400 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/20 ring-2 ring-white/10">
-                  م
-                </div>
-                <div className="absolute -bottom-0.5 -left-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[2.5px] border-[#0B1120] shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.08] text-white/60 text-xs font-semibold">
+                م
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white/90 truncate">مدير النظام</p>
-                <p className="text-[10px] text-white/30 truncate font-mono tracking-tight">elshawaf@mawadaphone.com</p>
-              </div>
+              <div className="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-[#008060] border-2 border-[#0a0f1a]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-medium text-white/70 truncate">مدير النظام</p>
+              <p className="text-[10px] text-white/20 truncate">elshawaf@mawadaphone.com</p>
             </div>
           </div>
         </div>
 
+        {/* Divider */}
+        <div className="mx-5 h-px bg-white/[0.04]" />
+
         {/* Navigation */}
-        <nav className="flex-1 px-3 pt-5 pb-3 space-y-0.5 overflow-y-auto scrollbar-thin">
-          <p className="px-3 pb-2 text-[10px] font-semibold text-white/15 uppercase tracking-[0.15em]">
-            القائمة الرئيسية
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
+          <p className="px-3 pb-2.5 pt-2 text-[9px] font-medium text-white/15 uppercase tracking-[0.2em]">
+            القائمة
           </p>
           {navItems.map(({ href, label, icon: Icon }, idx) => {
             const isActive = location === href;
@@ -196,65 +192,46 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden min-h-[44px]",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[12.5px] font-medium transition-all duration-200 group relative min-h-[40px]",
                   isActive
-                    ? "text-white"
-                    : "text-white/35 hover:text-white/70"
+                    ? "text-white/90"
+                    : "text-white/30 hover:text-white/60"
                 )}
                 style={{
                   animation: open && mounted && !isDesktop
-                    ? `navSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 0.035}s both`
+                    ? `navSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 0.03}s both`
                     : "none",
                 }}
               >
-                {/* Active glow background */}
-                <div className={cn(
-                  "absolute inset-0 rounded-xl transition-all duration-300",
-                  isActive
-                    ? "bg-gradient-to-l from-blue-500/[0.12] via-blue-500/[0.04] to-transparent opacity-100 shadow-[inset_0_1px_0_rgba(59,130,246,0.1)]"
-                    : "bg-gradient-to-l from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100"
-                )} />
-
-                {/* Active accent line */}
+                {/* Active background */}
                 {isActive && (
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gradient-to-b from-blue-400 to-sky-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  <div className="absolute inset-0 rounded-lg bg-white/[0.06]" />
                 )}
 
                 {/* Icon */}
-                <div className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
-                  isActive
-                    ? "bg-blue-500/20 shadow-sm shadow-blue-500/10"
-                    : "bg-white/[0.04] group-hover:bg-white/[0.08]"
-                )}>
-                  <Icon className={cn(
-                    "w-4 h-4 transition-all duration-200",
-                    isActive ? "text-blue-300 drop-shadow-[0_0_6px_rgba(96,165,250,0.4)]" : "text-white/30 group-hover:text-white/60"
-                  )} />
-                </div>
+                <Icon className={cn(
+                  "w-4 h-4 relative shrink-0 transition-colors duration-200",
+                  isActive ? "text-[#008060]" : "text-white/20 group-hover:text-white/40"
+                )} />
 
                 {/* Label */}
                 <span className="relative">{label}</span>
 
-                {/* Shine overlay */}
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-l from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                {/* Hover background */}
+                <div className="absolute inset-0 rounded-lg bg-white/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
               </Link>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="relative p-4">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.05] to-transparent" />
+        <div className="px-5 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="relative flex w-2 h-2">
-                <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-40" />
-                <span className="relative rounded-full bg-emerald-400 w-2 h-2 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-              </span>
-              <span className="text-[10px] text-white/20 font-medium">النظام نشط</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#008060]" />
+              <span className="text-[10px] text-white/20">النظام نشط</span>
             </div>
-            <span className="text-[10px] text-white/12 font-mono tracking-tight">مودة فون v2.0</span>
+            <span className="text-[10px] text-white/10">v2.0</span>
           </div>
         </div>
       </aside>
@@ -263,11 +240,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         @keyframes navSlideIn {
           from {
             opacity: 0;
-            transform: translateX(0.75rem) scale(0.95);
+            transform: translateX(0.5rem);
           }
           to {
             opacity: 1;
-            transform: translateX(0) scale(1);
+            transform: translateX(0);
           }
         }
       `}</style>
