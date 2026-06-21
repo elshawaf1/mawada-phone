@@ -42,13 +42,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("Supabase auth error:", JSON.stringify(error));
+      throw new Error(error.message || "فشل تسجيل الدخول — تحقق من البريد وكلمة المرور");
+    }
+
+    if (!data?.user) {
+      throw new Error("فشل تسجيل الدخول — لا يوجد مستخدم");
+    }
 
     const profile = await fetchProfile(data.user.id);
 
     if (!profile) {
+      console.error("Profile not found for user:", data.user.id);
       await supabase.auth.signOut();
-      throw new Error("حسابك غير موجود في النظام");
+      throw new Error("حسابك غير موجود في النظام — تأكد من ربط الحساب بالملف الشخصي");
     }
 
     if (profile.role !== "ADMIN") {

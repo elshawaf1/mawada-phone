@@ -16,8 +16,9 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "فشل تسجيل الدخول";
+    } catch (err: any) {
+      console.error("Login failed:", err);
+      const message = err?.message || err?.error_description || JSON.stringify(err) || "فشل تسجيل الدخول";
       setError(message);
     } finally {
       setLoading(false);
