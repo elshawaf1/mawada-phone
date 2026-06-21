@@ -10,11 +10,19 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window === "undefined") return false;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined") return true;
     return window.innerWidth >= 1024;
   });
   const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -34,7 +42,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-dvh bg-background overflow-hidden">
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.03),transparent_50%)]" />
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={isDesktop || sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0 relative">
         <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} onCmdOpen={() => setCmdOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8 scrollbar-thin overscroll-contain">
