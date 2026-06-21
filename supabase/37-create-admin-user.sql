@@ -4,23 +4,27 @@
 -- Enable pgcrypto if not already enabled
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Insert into auth.users (Supabase auth table)
-INSERT INTO auth.users (
-  instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, created_at, updated_at,
-  raw_app_meta_data, raw_user_meta_data
-) VALUES (
-  '00000000-0000-0000-0000-000000000000',
-  gen_random_uuid(),
-  'authenticated',
-  'authenticated',
-  'mawada2026@gmail.com',
-  crypt('adminmawada', gen_salt('bf')),
-  now(), now(), now(),
-  '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"name":"Admin","role":"ADMIN"}'::jsonb
-)
-ON CONFLICT (email) DO NOTHING;
+-- Insert into auth.users (only if not already exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'mawada2026@gmail.com') THEN
+    INSERT INTO auth.users (
+      instance_id, id, aud, role, email, encrypted_password,
+      email_confirmed_at, created_at, updated_at,
+      raw_app_meta_data, raw_user_meta_data
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000000',
+      gen_random_uuid(),
+      'authenticated',
+      'authenticated',
+      'mawada2026@gmail.com',
+      crypt('adminmawada', gen_salt('bf')),
+      now(), now(), now(),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"name":"Admin","role":"ADMIN"}'::jsonb
+    );
+  END IF;
+END $$;
 
 -- Insert admin profile with ADMIN role
 INSERT INTO public.profiles (id, name, email, phone, role, "createdAt", "updatedAt")
