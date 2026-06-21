@@ -87,9 +87,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- BRANCHES
 INSERT INTO public.branches (id, name, "nameAr", address, "addressAr", phone, "isActive") VALUES
-  ('branch-cairo', 'Cairo Branch', 'فرع القاهرة', '123 Ramses St, Downtown Cairo', '123 شارع رمسيس، وسط البلد، القاهرة', '0225789000', true),
-  ('branch-alex', 'Alexandria Branch', 'فرع الإسكندرية', '456 El-Horreya Rd, Alexandria', '456 طريق الحرية، الإسكندرية', '034567890', true),
-  ('branch-mansoura', 'Mansoura Branch', 'فرع المنصورة', '789 El-Gomhoria St, Mansoura', '789 شارع الجمهورية، المنصورة', '0502345678', true)
+  ('branch-shebin', 'Shebin Al-Kom Branch', 'فرع شبين الكوم', 'Gamal Abdel Nasser St (Sea St), Shebin Al-Kom, Menoufia, Egypt 32511', 'شارع جمال عبد الناصر (شارع البحر)، شبين الكوم، المنوفية، مصر 32511', '0402345678', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- BANNERS
