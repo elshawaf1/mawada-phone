@@ -150,7 +150,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           <img
             src="/logo.png"
             alt="مودة فون"
-            className="h-20 w-auto object-contain"
+            className="h-60 w-auto object-contain"
           />
         </div>
 
