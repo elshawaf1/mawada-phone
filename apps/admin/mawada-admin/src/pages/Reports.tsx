@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart3, DollarSign, ShoppingCart, TrendingUp, Users, TrendingDown } from "lucide-react";
@@ -127,12 +127,12 @@ export default function Reports() {
       const sinceDate = sinceStr ? new Date(sinceStr) : new Date("2020-01-01");
       const sinceStrPrev = dateRange === "all" ? null : new Date(sinceDate.getTime() - (parseInt(dateRange) * 86400000)).toISOString();
 
-      const orderQuery = supabase
+      const orderQuery = supabaseAdmin
         .from("orders")
         .select("id, total, status, paymentMethod, paymentStatus, createdAt")
         .order("createdAt", { ascending: true });
 
-      const orderQueryPrev = supabase
+      const orderQueryPrev = supabaseAdmin
         .from("orders")
         .select("id, total, status, paymentMethod, paymentStatus, createdAt");
 
@@ -155,10 +155,10 @@ export default function Reports() {
       const prevOrdersData = ordersPrevRes.data || [];
       const allCustomers = customersRes.count || 0;
 
-      const revenue = orders.filter((o: any) => o.paymentStatus === "PAID").reduce((s: number, o: any) => s + Number(o.total), 0);
+      const revenue = orders.reduce((s: number, o: any) => s + Number(o.total), 0);
       const count = orders.length;
       const aov = count > 0 ? revenue / count : 0;
-      const prevRevenueVal = prevOrdersData.filter((o: any) => o.paymentStatus === "PAID").reduce((s: number, o: any) => s + Number(o.total), 0);
+      const prevRevenueVal = prevOrdersData.reduce((s: number, o: any) => s + Number(o.total), 0);
       const prevCount = prevOrdersData.length;
       const prevAovVal = prevCount > 0 ? prevRevenueVal / prevCount : 0;
 
@@ -174,7 +174,7 @@ export default function Reports() {
       orders.forEach((o: any) => {
         const date = new Date(o.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" });
         if (!dailyMap[date]) dailyMap[date] = { revenue: 0, orders: 0 };
-        if (o.paymentStatus === "PAID") dailyMap[date].revenue += Number(o.total);
+        dailyMap[date].revenue += Number(o.total);
         dailyMap[date].orders += 1;
       });
       const dailyData = Object.entries(dailyMap).map(([date, d]) => ({ date, ...d }));
@@ -196,7 +196,7 @@ export default function Reports() {
 
       if (orders.length > 0) {
         const orderIds = orders.map((o: any) => o.id);
-        const { data: items } = await supabase
+        const { data: items } = await supabaseAdmin
           .from("order_items")
           .select(`quantity, unitPrice, products!inner(categoryId, categories!inner(nameAr))`)
           .in("orderId", orderIds);

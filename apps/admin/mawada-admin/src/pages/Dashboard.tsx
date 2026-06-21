@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Info, TrendingUp, TrendingDown } from "lucide-react";
@@ -280,7 +280,7 @@ export default function Dashboard() {
       prevStart.setDate(prevStart.getDate() - days);
 
       const [ordersRes, topRes] = await Promise.all([
-        supabase
+        supabaseAdmin
           .from("orders")
           .select("createdAt, total, discount, paymentStatus, paymentMethod")
           .gte("createdAt", prevStart.toISOString())
@@ -308,12 +308,10 @@ export default function Dashboard() {
           map[formatDate(d)] = { revenue: 0, net: 0 };
         }
         orders.forEach((o: any) => {
-          if (o.paymentStatus === "PAID") {
-            const key = formatDate(new Date(o.createdAt));
-            if (map[key]) {
-              map[key].revenue += Number(o.total);
-              map[key].net += Number(o.total) - Number(o.discount || 0);
-            }
+          const key = formatDate(new Date(o.createdAt));
+          if (map[key]) {
+            map[key].revenue += Number(o.total);
+            map[key].net += Number(o.total) - Number(o.discount || 0);
           }
         });
         return map;
@@ -330,13 +328,10 @@ export default function Dashboard() {
         date, current: currentDaily[date].net, previous: prevDaily[date]?.net || 0,
       })));
 
-      const paidCurrent = currentOrders.filter((o: any) => o.paymentStatus === "PAID");
-      const paidPrev = prevOrders.filter((o: any) => o.paymentStatus === "PAID");
-
-      setTotalSales(paidCurrent.reduce((s: number, o: any) => s + Number(o.total), 0));
-      setPrevTotalSales(paidPrev.reduce((s: number, o: any) => s + Number(o.total), 0));
-      setNetSales(paidCurrent.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0));
-      setPrevNetSales(paidPrev.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0));
+      setTotalSales(currentOrders.reduce((s: number, o: any) => s + Number(o.total), 0));
+      setPrevTotalSales(prevOrders.reduce((s: number, o: any) => s + Number(o.total), 0));
+      setNetSales(currentOrders.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0));
+      setPrevNetSales(prevOrders.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0));
 
       const countMethods = (orders: any[]) => {
         const map: Record<string, number> = {};
