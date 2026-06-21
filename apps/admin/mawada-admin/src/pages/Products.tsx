@@ -28,6 +28,7 @@ interface Product {
   categoryId: string | null;
   brandId: string | null;
   basePrice: number;
+  costPrice: number;
   salePrice: number | null;
   isOnSale: boolean;
   totalStock: number;
@@ -49,7 +50,7 @@ interface Category { id: string; name: string; nameAr: string; }
 interface Brand { id: string; name: string; nameAr: string; }
 interface Variant {
   id?: string; color: string | null; colorHex: string | null;
-  storage: string | null; ram: string | null; price: number; stock: number; sku: string | null; batteryHealth: number | null; taxRate: number; _isNew?: boolean; _tempId?: string;
+  storage: string | null; ram: string | null; price: number; costPrice: number; stock: number; sku: string | null; batteryHealth: number | null; taxRate: number; _isNew?: boolean; _tempId?: string;
 }
 interface Spec {
   id?: string; groupName: string; key: string; value: string; sortOrder: number; _isNew?: boolean;
@@ -76,6 +77,7 @@ export default function Products() {
   const [categoryId, setCategoryId] = useState("");
   const [brandId, setBrandId] = useState("");
   const [basePrice, setBasePrice] = useState(0);
+  const [costPrice, setCostPrice] = useState(0);
   const [salePrice, setSalePrice] = useState<number | null>(null);
   const [isOnSale, setIsOnSale] = useState(false);
   const [usePriceRange, setUsePriceRange] = useState(false);
@@ -129,6 +131,7 @@ export default function Products() {
     setCategoryId(product.categoryId || "");
     setBrandId(product.brandId || "");
     setBasePrice(product.basePrice);
+    setCostPrice(product.costPrice || 0);
     setSalePrice(product.salePrice);
     setIsOnSale(product.isOnSale);
     setUsePriceRange(product.usePriceRange || false);
@@ -146,7 +149,7 @@ export default function Products() {
       .order("createdAt");
     setVariants((existingVariants || []).map(v => ({
       id: v.id, color: v.color, colorHex: v.colorHex,
-      storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth, taxRate: v.taxRate || 0,
+      storage: v.storage, ram: v.ram, price: v.price, costPrice: v.costPrice || 0, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth, taxRate: v.taxRate || 0,
     })));
     const { data: existingSpecs } = await supabase
       .from("specifications")
@@ -203,6 +206,7 @@ export default function Products() {
         name, nameAr, slug, description, descriptionAr,
         categoryId: categoryId || null, brandId: brandId || null,
         basePrice: usePriceRange ? 0 : basePrice,
+        costPrice,
         salePrice: usePriceRange ? null : salePrice,
         isOnSale: usePriceRange ? false : isOnSale,
         usePriceRange,
@@ -255,7 +259,7 @@ export default function Products() {
       }
       if (variants.length > 0) {
         const { error: varError } = await supabaseAdmin.from("product_variants").insert(variants.map(v => ({
-          productId, color: v.color, colorHex: v.colorHex, storage: v.storage, ram: v.ram, price: v.price, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth, taxRate: v.taxRate || 0,
+          productId, color: v.color, colorHex: v.colorHex, storage: v.storage, ram: v.ram, price: v.price, costPrice: v.costPrice || 0, stock: v.stock, sku: v.sku, batteryHealth: v.batteryHealth, taxRate: v.taxRate || 0,
         })));
         if (varError) throw varError;
       }
@@ -319,6 +323,7 @@ export default function Products() {
         categoryId: product.categoryId,
         brandId: product.brandId,
         basePrice: product.basePrice,
+        costPrice: product.costPrice || 0,
         salePrice: product.salePrice,
         isOnSale: product.isOnSale,
         usePriceRange: product.usePriceRange || false,
@@ -353,6 +358,7 @@ export default function Products() {
           storage: v.storage,
           ram: v.ram,
           price: v.price,
+          costPrice: v.costPrice || 0,
           stock: 0,
           sku: v.sku ? `${v.sku}-COPY` : null,
           batteryHealth: v.batteryHealth,
@@ -395,7 +401,7 @@ export default function Products() {
 
   const getVariantId = (v: Variant) => v.id || v._tempId || `gen_${Math.random().toString(36).slice(2, 10)}`;
   
-  const addVariant = () => setVariants((prev) => [...prev, { color: null, colorHex: null, storage: null, ram: null, price: 0, stock: 0, sku: null, batteryHealth: null, taxRate: 0, _isNew: true, _tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}` }]);
+  const addVariant = () => setVariants((prev) => [...prev, { color: null, colorHex: null, storage: null, ram: null, price: 0, costPrice: 0, stock: 0, sku: null, batteryHealth: null, taxRate: 0, _isNew: true, _tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}` }]);
   
   const removeVariant = async (variantId: string) => {
     const variant = variants.find(v => getVariantId(v) === variantId);
@@ -875,7 +881,11 @@ export default function Products() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">سعر الشراء (التكلفة) *</Label>
+                    <Input type="number" inputMode="numeric" value={costPrice} onChange={(e) => setCostPrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
+                  </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">السعر الأساسي *</Label>
                     <Input type="number" inputMode="numeric" value={basePrice} onChange={(e) => setBasePrice(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
@@ -1009,6 +1019,10 @@ export default function Products() {
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground font-semibold text-primary">السعر (مطلوب) *</Label>
                             <Input type="number" inputMode="numeric" placeholder="سعر هذا البديل" value={v.price} onChange={(e) => updateVariant(variantId, "price", Number(e.target.value))} className="bg-white/50 font-number font-semibold" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground font-semibold text-orange-600">سعر الشراء (التكلفة)</Label>
+                            <Input type="number" inputMode="numeric" placeholder="التكلفة" value={v.costPrice} onChange={(e) => updateVariant(variantId, "costPrice", Number(e.target.value))} className="bg-white/50 font-number" />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground">المخزون</Label>

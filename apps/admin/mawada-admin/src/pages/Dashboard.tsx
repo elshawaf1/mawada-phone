@@ -191,6 +191,80 @@ function TopProductsCard({ products }: { products: { id: string; nameAr: string;
   );
 }
 
+function ProfitCard({
+  cogs,
+  grossProfit,
+  netRevenue,
+  prevCOGS,
+  prevGrossProfit,
+  prevNetRevenue,
+  isMobile,
+}: {
+  cogs: number;
+  grossProfit: number;
+  netRevenue: number;
+  prevCOGS: number;
+  prevGrossProfit: number;
+  prevNetRevenue: number;
+  isMobile: boolean;
+}) {
+  const margin = netRevenue > 0 ? ((grossProfit / netRevenue) * 100) : 0;
+  const prevMargin = prevNetRevenue > 0 ? ((prevGrossProfit / prevNetRevenue) * 100) : 0;
+  const marginChange = prevMargin > 0 ? Math.round(margin - prevMargin) : undefined;
+
+  const items = [
+    { label: "تكلفة البضاعة", value: cogs, color: "#F49342" },
+    { label: "صافي الربح", value: grossProfit, color: "#008060" },
+    { label: "هامش الربح", value: margin, color: "#5C6AC4", suffix: "%" },
+  ];
+
+  return (
+    <Card borderless className="shadow-sm chart-card-animate" style={{ animationDelay: "0.25s" }}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-sm">تحليل الربح</CardTitle>
+            <CardDescription>التكلفة والربح الصافي</CardDescription>
+          </div>
+          {marginChange !== undefined && (
+            <span className={cn(
+              "inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full font-number",
+              marginChange >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+            )}>
+              {marginChange >= 0 ? "+" : ""}{marginChange}%
+            </span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-4">
+        {items.map((item) => (
+          <div key={item.label} className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground/60">{item.label}</span>
+              <span className="text-sm font-bold font-number" style={{ color: item.color }}>
+                {item.suffix
+                  ? `${item.value.toFixed(1)}${item.suffix}`
+                  : `${item.value.toLocaleString("ar-EG")} ج`
+                }
+              </span>
+            </div>
+            <div className="h-2 bg-[#f1f3f5] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full chart-bar-animate"
+                style={{
+                  width: `${netRevenue > 0 && !item.suffix ? Math.min((item.value / netRevenue) * 100, 100) : item.suffix ? Math.max(0, Math.min(item.value, 100)) : 0}%`,
+                  backgroundColor: item.color,
+                  animationDelay: "0.5s",
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 function MethodsDonutsCard({
   currentData,
   isMobile,
@@ -262,6 +336,10 @@ export default function Dashboard() {
   const [prevTotalSales, setPrevTotalSales] = useState(0);
   const [netSales, setNetSales] = useState(0);
   const [prevNetSales, setPrevNetSales] = useState(0);
+  const [totalCOGS, setTotalCOGS] = useState(0);
+  const [prevCOGS, setPrevCOGS] = useState(0);
+  const [grossProfit, setGrossProfit] = useState(0);
+  const [prevGrossProfit, setPrevGrossProfit] = useState(0);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [currentMethods, setCurrentMethods] = useState<any[]>([]);
 
@@ -333,6 +411,32 @@ export default function Dashboard() {
       setNetSales(currentOrders.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0));
       setPrevNetSales(prevOrders.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0));
 
+      const currentOrderIds = currentOrders.map((o: any) => o.id);
+      const prevOrderIds = prevOrders.map((o: any) => o.id);
+
+      let currentCOGS = 0;
+      let prevCOGSVal = 0;
+
+      if (currentOrderIds.length > 0) {
+        const { data: currentItems } = await supabaseAdmin
+          .from("order_items")
+          .select("quantity, costPrice")
+          .in("orderId", currentOrderIds);
+        currentCOGS = (currentItems || []).reduce((s: number, item: any) => s + Number(item.quantity) * Number(item.costPrice || 0), 0);
+      }
+      if (prevOrderIds.length > 0) {
+        const { data: prevItems } = await supabaseAdmin
+          .from("order_items")
+          .select("quantity, costPrice")
+          .in("orderId", prevOrderIds);
+        prevCOGSVal = (prevItems || []).reduce((s: number, item: any) => s + Number(item.quantity) * Number(item.costPrice || 0), 0);
+      }
+
+      setTotalCOGS(currentCOGS);
+      setPrevCOGS(prevCOGSVal);
+      setGrossProfit(netSales - currentCOGS);
+      setPrevGrossProfit(prevNetSales - prevCOGSVal);
+
       const countMethods = (orders: any[]) => {
         const map: Record<string, number> = {};
         orders.forEach((o: any) => {
@@ -361,7 +465,7 @@ export default function Dashboard() {
           <div className="h-9 w-32 bg-muted/50 rounded-xl animate-pulse" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => <SkeletonChart key={i} />)}
+          {[1, 2, 3, 4, 5].map((i) => <SkeletonChart key={i} />)}
         </div>
       </div>
     );
@@ -406,6 +510,7 @@ export default function Dashboard() {
           index={1}
         />
         <TopProductsCard products={topProducts} />
+        <ProfitCard cogs={totalCOGS} grossProfit={grossProfit} netRevenue={netSales} prevCOGS={prevCOGS} prevGrossProfit={prevGrossProfit} prevNetRevenue={prevNetSales} isMobile={isMobile} />
         <MethodsDonutsCard currentData={currentMethods} isMobile={isMobile} />
       </div>
     </div>

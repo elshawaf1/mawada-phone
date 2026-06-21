@@ -5,6 +5,41 @@ const PAYMOB_SECRET_KEY = Deno.env.get('PAYMOB_SECRET_KEY')!
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
+let _settingsCache: Record<string, number> = {}
+let _settingsTs = 0
+const SETTINGS_TTL = 5 * 60 * 1000 // 5 minutes
+
+async function getSettings(supabaseClient: any): Promise<Record<string, number>> {
+  const now = Date.now()
+  if (Object.keys(_settingsCache).length > 0 && now - _settingsTs < SETTINGS_TTL) {
+    return _settingsCache
+  }
+  try {
+    const { data } = await supabaseClient
+      .from('system_settings')
+      .select('key, value')
+      .eq('is_active', true)
+    if (data) {
+      const map: Record<string, number> = {}
+      data.forEach((s: any) => { map[s.key] = Number(s.value) })
+      _settingsCache = {
+        delivery_fee: 90,
+        free_shipping_threshold: 50000,
+        branch_pickup_fee: 0,
+        cod_fee: 0,
+        ...map,
+      }
+      _settingsTs = now
+    }
+  } catch (e) {
+    console.warn('Failed to fetch settings, using defaults:', e)
+    if (Object.keys(_settingsCache).length === 0) {
+      _settingsCache = { delivery_fee: 90, free_shipping_threshold: 50000, branch_pickup_fee: 0, cod_fee: 0 }
+    }
+  }
+  return _settingsCache
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -169,16 +204,19 @@ serve(async (req) => {
       const productIds = cartItems.map((item: { productId: string }) => item.productId)
       const variantIds = cartItems.filter((i: any) => i.variantId).map((i: any) => i.variantId)
 
+      // Fetch system settings for delivery fee and free shipping threshold
+      const settings = await getSettings(supabase)
+
       const { data: products, error: prodErr } = await supabase
         .from('products')
-        .select('id, basePrice, nameAr, name, totalStock')
+        .select('id, basePrice, costPrice, nameAr, name, totalStock')
         .in('id', productIds)
 
       let variantMap = new Map()
       if (variantIds.length > 0) {
         const { data: variants } = await supabase
           .from('product_variants')
-          .select('id, price, productId, stock')
+          .select('id, price, costPrice, productId, stock')
           .in('id', variantIds)
         if (variants) {
           variantMap = new Map(variants.map((v: any) => [v.id, v]))
@@ -235,8 +273,8 @@ serve(async (req) => {
         }
       }
 
-      const freeShipping = subtotal > 50000
-      const shippingCost = deliveryType === 'branch' ? 0 : (freeShipping ? 0 : 90)
+      const freeShipping = subtotal > (settings.free_shipping_threshold || 50000)
+      const shippingCost = deliveryType === 'branch' ? 0 : (freeShipping ? 0 : (settings.delivery_fee || 90))
       const total = subtotal - discount + shippingCost
 
       const orderId = generateId('ord')
@@ -274,8 +312,11 @@ serve(async (req) => {
       if (cartItems?.length > 0) {
         const orderItems = cartItems.map((item: { productId?: string; variantId?: string; quantity: number }) => {
           let unitPrice = Number(productMap.get(item.productId)?.basePrice || 0)
+          let costPrice = Number(productMap.get(item.productId)?.costPrice || 0)
           if (item.variantId && variantMap.has(item.variantId)) {
-            unitPrice = Number(variantMap.get(item.variantId).price)
+            const variant = variantMap.get(item.variantId)
+            unitPrice = Number(variant.price)
+            costPrice = Number(variant.costPrice || 0)
           }
           return {
             id: generateId('oi'),
@@ -284,6 +325,7 @@ serve(async (req) => {
             variantId: item.variantId || null,
             quantity: item.quantity,
             unitPrice,
+            costPrice,
           }
         })
         const { error: oiErr } = await supabase.from('order_items').insert(orderItems)

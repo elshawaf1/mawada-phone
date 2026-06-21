@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabaseAdmin } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart3, DollarSign, ShoppingCart, TrendingUp, Users, TrendingDown } from "lucide-react";
+import { BarChart3, DollarSign, ShoppingCart, TrendingUp, Users, TrendingDown, ShieldCheck, BadgeCheck } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { TiltCard } from "@/components/ui/tilt-card";
@@ -101,6 +101,10 @@ export default function Reports() {
   const [prevRevenue, setPrevRevenue] = useState(0);
   const [prevOrders, setPrevOrders] = useState(0);
   const [prevAOV, setPrevAOV] = useState(0);
+  const [totalCOGS, setTotalCOGS] = useState(0);
+  const [prevCOGS, setPrevCOGS] = useState(0);
+  const [grossProfit, setGrossProfit] = useState(0);
+  const [prevGrossProfit, setPrevGrossProfit] = useState(0);
 
   const [revenueChartData, setRevenueChartData] = useState<any[]>([]);
   const [statusChartData, setStatusChartData] = useState<any[]>([]);
@@ -170,6 +174,18 @@ export default function Reports() {
       setPrevOrders(prevCount);
       setPrevAOV(prevAovVal);
 
+      if (prevOrdersData.length > 0) {
+        const prevOrderIds = prevOrdersData.map((o: any) => o.id);
+        const { data: prevItems } = await supabaseAdmin
+          .from("order_items")
+          .select("quantity, costPrice")
+          .in("orderId", prevOrderIds);
+        const prevCogsVal = (prevItems || []).reduce((s: number, item: any) => s + Number(item.quantity) * Number(item.costPrice || 0), 0);
+        const prevNetRev = prevOrdersData.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0);
+        setPrevCOGS(prevCogsVal);
+        setPrevGrossProfit(prevNetRev - prevCogsVal);
+      }
+
       const dailyMap: Record<string, { revenue: number; orders: number }> = {};
       orders.forEach((o: any) => {
         const date = new Date(o.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" });
@@ -198,8 +214,17 @@ export default function Reports() {
         const orderIds = orders.map((o: any) => o.id);
         const { data: items } = await supabaseAdmin
           .from("order_items")
-          .select(`quantity, unitPrice, products!inner(categoryId, categories!inner(nameAr))`)
+          .select(`quantity, unitPrice, costPrice, products!inner(categoryId, categories!inner(nameAr))`)
           .in("orderId", orderIds);
+
+        let cogsSum = 0;
+        (items || []).forEach((item: any) => {
+          cogsSum += Number(item.quantity) * Number(item.costPrice || 0);
+        });
+
+        const netRev = orders.reduce((s: number, o: any) => s + Number(o.total) - Number(o.discount || 0), 0);
+        setTotalCOGS(cogsSum);
+        setGrossProfit(netRev - cogsSum);
 
         const catRevenue: Record<string, number> = {};
         (items || []).forEach((item: any) => {
@@ -247,8 +272,8 @@ export default function Reports() {
             {[1,2,3,4,5].map(i => <div key={i} className="h-8 w-16 bg-muted/50 rounded-lg animate-pulse" />)}
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1,2,3,4].map(i => <SkeletonKPI key={i} />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3,4,5,6].map(i => <SkeletonKPI key={i} />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-3"><SkeletonChart /></div>
@@ -291,7 +316,7 @@ export default function Reports() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <ReportsKpiCard title="إجمالي الإيرادات" value={totalRevenue} icon={DollarSign} color="#008060"
           trend={trend(totalRevenue, prevRevenue)} formatter={(v: number) => `${v.toLocaleString("ar-EG")} ج`} />
         <ReportsKpiCard title="إجمالي الطلبات" value={totalOrders} icon={ShoppingCart} color="#5C6AC4"
@@ -299,6 +324,10 @@ export default function Reports() {
         <ReportsKpiCard title="متوسط قيمة الطلب" value={avgOrderValue} icon={TrendingUp} color="#F49342"
           trend={trend(avgOrderValue, prevAOV)} formatter={(v: number) => `${Math.round(v).toLocaleString("ar-EG")} ج`} />
         <ReportsKpiCard title="إجمالي العملاء" value={newCustomers} icon={Users} color="#9C6ADE" />
+        <ReportsKpiCard title="تكلفة البضاعة (COGS)" value={totalCOGS} icon={ShieldCheck} color="#F49342"
+          trend={trend(totalCOGS, prevCOGS)} formatter={(v: number) => `${v.toLocaleString("ar-EG")} ج`} />
+        <ReportsKpiCard title="صافي الربح" value={grossProfit} icon={BadgeCheck} color="#008060"
+          trend={trend(grossProfit, prevGrossProfit)} formatter={(v: number) => `${v.toLocaleString("ar-EG")} ج`} />
       </div>
 
       {/* Row 2: Revenue + Status */}
