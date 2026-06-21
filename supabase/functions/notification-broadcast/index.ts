@@ -46,10 +46,11 @@ async function sendExpoPushBatch(messages: Record<string, unknown>[]) {
 
 async function pushForUserIds(
   supabase: ReturnType<typeof createClient>,
-  userIds: string[],
-  payload: { title: string; body: string; type: string; notifId: string; orderId?: string | null },
+  notifMap: Map<string, string>,
+  payload: { title: string; body: string; type: string; orderId?: string | null },
 ) {
-  if (!userIds || userIds.length === 0) return { sent: 0, pruned: 0 }
+  const userIds = Array.from(notifMap.keys())
+  if (userIds.length === 0) return { sent: 0, pruned: 0 }
 
   const { data: tokens, error: tokensErr } = await supabase
     .from('push_tokens')
@@ -59,29 +60,24 @@ async function pushForUserIds(
   if (tokensErr) throw tokensErr
   if (!tokens || tokens.length === 0) return { sent: 0, pruned: 0 }
 
-  const chunks: Array<{ token: string; id: string; platform: string }> = []
-  for (const t of tokens) {
-    chunks.push({ token: t.token, id: t.id, platform: t.platform })
-  }
-
   let sent = 0
   let pruned = 0
   const staleIds: string[] = []
 
-  for (let i = 0; i < chunks.length; i += EXPO_PUSH_CHUNK) {
-    const batch = chunks.slice(i, i + EXPO_PUSH_CHUNK)
-    const messages = batch.map((b) => ({
-      to: b.token,
+  for (const t of tokens) {
+    const notifId = notifMap.get(t.userId) || ''
+    const messages = [{
+      to: t.token,
       title: payload.title,
       body: payload.body,
       sound: 'default',
       channelId: 'default',
       data: {
-        notifId: payload.notifId,
+        notifId,
         type: payload.type,
         orderId: payload.orderId ?? null,
       },
-    }))
+    }]
 
     try {
       const result = await sendExpoPushBatch(messages)
@@ -90,7 +86,7 @@ async function pushForUserIds(
         if (ticket.status === 'ok') {
           sent += 1
         } else if (ticket.details?.error === 'DeviceNotRegistered') {
-          staleIds.push(batch[idx].id)
+          staleIds.push(t.id)
           pruned += 1
         }
       })
@@ -112,7 +108,6 @@ serve(async (req) => {
   }
 
   try {
-    // --- JWT Verification (C3) ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
@@ -122,24 +117,36 @@ serve(async (req) => {
       return fail('Unauthorized - no token provided')
     }
 
-    const authClient = createClient(supabaseUrl, supabaseServiceKey)
-    const { data: { user }, error: authError } = await authClient.auth.getUser(token)
-    if (authError || !user) {
-      return fail('Unauthorized - invalid token')
-    }
+    const isAdmin = token === supabaseServiceKey
 
-    // --- Admin role check (H9) ---
-    const { data: profile, error: profileErr } = await authClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    if (!isAdmin) {
+      const authClient = createClient(supabaseUrl, supabaseServiceKey)
+      const { data: { user }, error: authError } = await authClient.auth.getUser(token)
+      if (authError || !user) {
+        return fail('Unauthorized - invalid token')
+      }
 
-    if (profileErr || profile?.role !== 'ADMIN') {
-      return fail('Forbidden - admin access required')
+      const { data: profile, error: profileErr } = await authClient
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileErr || profile?.role !== 'ADMIN') {
+        return fail('Forbidden - admin access required')
+      }
     }
 
     const admin = createClient(supabaseUrl, supabaseServiceKey)
+
+    const { data: adminUser } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('role', 'ADMIN')
+      .limit(1)
+      .maybeSingle()
+
+    const adminUserId = adminUser?.id || null
 
     const { title, titleAr, body, bodyAr, type, targetUserId, orderId } = await req.json()
 
@@ -157,9 +164,10 @@ serve(async (req) => {
       body: body || '',
       bodyAr: bodyAr || body || '',
       type: type || 'info',
+      sentBy: adminUserId,
     }
 
-    const targetUserIds: string[] = []
+    const notifMap = new Map<string, string>()
 
     if (targetUserId) {
       const { data: inserted, error: insertErr } = await admin
@@ -168,7 +176,7 @@ serve(async (req) => {
         .select('id, "userId"')
         .single()
       if (insertErr) return fail(insertErr.message)
-      targetUserIds.push(inserted.userId)
+      notifMap.set(inserted.userId, inserted.id)
     } else {
       const { data: users, error: usersErr } = await admin
         .from('profiles')
@@ -183,19 +191,18 @@ serve(async (req) => {
           .insert(rows)
           .select('id, "userId"')
         if (insertErr) return fail(insertErr.message)
-        for (const row of inserted || []) targetUserIds.push(row.userId)
+        for (const row of inserted || []) notifMap.set(row.userId, row.id)
       }
     }
 
     let pushResult: { sent: number; pruned: number } = { sent: 0, pruned: 0 }
-    if (targetUserIds.length > 0) {
+    if (notifMap.size > 0) {
       try {
         const head = { ...baseNotification }
-        pushResult = await pushForUserIds(admin, targetUserIds, {
+        pushResult = await pushForUserIds(admin, notifMap, {
           title: head.titleAr || head.title,
           body: head.bodyAr || head.body,
           type: head.type,
-          notifId: '',
           orderId: orderId || null,
         })
       } catch (e) {
@@ -203,7 +210,7 @@ serve(async (req) => {
       }
     }
 
-    return ok({ success: true, targetCount: targetUserIds.length, push: pushResult })
+    return ok({ success: true, targetCount: notifMap.size, push: pushResult })
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'Unknown error')
   }
