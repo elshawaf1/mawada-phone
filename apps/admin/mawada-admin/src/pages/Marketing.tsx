@@ -93,6 +93,8 @@ export default function Marketing() {
   const [catActive, setCatActive] = useState(true);
   const [catHomeImageUrl, setCatHomeImageUrl] = useState("");
   const [catSearchImageUrl, setCatSearchImageUrl] = useState("");
+  const [catHomeImageFile, setCatHomeImageFile] = useState<File | null>(null);
+  const [catSearchImageFile, setCatSearchImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -241,7 +243,18 @@ export default function Marketing() {
     setCatActive(true);
     setCatHomeImageUrl("");
     setCatSearchImageUrl("");
+    setCatHomeImageFile(null);
+    setCatSearchImageFile(null);
     setEditingCategory(null);
+  };
+
+  const handleCategoryImageUpload = async (file: File, folder: string): Promise<string> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const { data, error } = await supabaseAdmin.storage.from(folder).upload(fileName, file);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabaseAdmin.storage.from(folder).getPublicUrl(fileName);
+    return publicUrl;
   };
 
   const saveCategory = async () => {
@@ -252,6 +265,15 @@ export default function Marketing() {
 
     setSaving(true);
     try {
+      let homeUrl = catHomeImageUrl;
+      let searchUrl = catSearchImageUrl;
+      if (catHomeImageFile) {
+        homeUrl = await handleCategoryImageUpload(catHomeImageFile, "category-images");
+      }
+      if (catSearchImageFile) {
+        searchUrl = await handleCategoryImageUpload(catSearchImageFile, "category-images");
+      }
+
       const nameSource = catName || catNameAr;
       const baseSlug = nameSource
         .replace(/[^\w\s\u0600-\u06FF-]/g, "")
@@ -270,8 +292,8 @@ export default function Marketing() {
         sortOrder: catSortOrder,
       };
 
-      if (catHomeImageUrl) catData.homeImageUrl = catHomeImageUrl;
-      if (catSearchImageUrl) catData.searchImageUrl = catSearchImageUrl;
+      if (homeUrl) catData.homeImageUrl = homeUrl;
+      if (searchUrl) catData.searchImageUrl = searchUrl;
 
       if (editingCategory) {
         const { error } = await supabaseAdmin
@@ -704,21 +726,63 @@ export default function Marketing() {
             </div>
 
             <div className="space-y-2">
-              <Label>صورة الفئة - الصفحة الرئيسية (صورة غلاف كاملة)</Label>
+              <Label>صورة الصفحة الرئيسية (غلاف كامل)</Label>
               <p className="text-xs text-muted-foreground">تظهر كصورة غلاف كبيرة في قسم الفئات بالصفحة الرئيسية</p>
-              <Input value={catHomeImageUrl} onChange={(e) => setCatHomeImageUrl(e.target.value)} placeholder="https://..." />
-              {catHomeImageUrl && <img src={catHomeImageUrl} alt="" className="w-full h-24 object-cover rounded mt-2 ring-1 ring-black/5" />}
+              <div className="flex items-center gap-3">
+                <label className="flex-1 cursor-pointer">
+                  <div className="flex items-center justify-center gap-2 px-4 py-2.5 border border-dashed border-muted-foreground/25 rounded-lg hover:border-primary/50 hover:bg-muted/50 transition-colors">
+                    <ImagePlus className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">اختر صورة</span>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setCatHomeImageFile(file);
+                  }} />
+                </label>
+                {catHomeImageFile && (
+                  <div className="relative">
+                    <img src={URL.createObjectURL(catHomeImageFile)} alt="" className="w-20 h-14 object-cover rounded ring-1 ring-black/5" />
+                    <button type="button" onClick={() => setCatHomeImageFile(null)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
+                  </div>
+                )}
+                {!catHomeImageFile && catHomeImageUrl && (
+                  <div className="relative">
+                    <img src={catHomeImageUrl} alt="" className="w-20 h-14 object-cover rounded ring-1 ring-black/5" />
+                    <button type="button" onClick={() => setCatHomeImageUrl("")} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
+                  </div>
+                )}
+              </div>
+              <Input value={catHomeImageUrl} onChange={(e) => { setCatHomeImageUrl(e.target.value); setCatHomeImageFile(null); }} placeholder="أو الصق رابط الصورة هنا..." className="mt-1 text-xs" />
             </div>
 
             <div className="space-y-2">
-              <Label>أيقونة الفئة - صفحة البحث (أيقونة صغيرة)</Label>
+              <Label>أيقونة صفحة البحث (أيقونة صغيرة)</Label>
               <p className="text-xs text-muted-foreground">تظهر كأيقونة صغيرة دائرية في قسم الفئات بصفحة البحث</p>
-              <Input value={catSearchImageUrl} onChange={(e) => setCatSearchImageUrl(e.target.value)} placeholder="https://..." />
-              {catSearchImageUrl && (
-                <div className="flex justify-center mt-2">
-                  <img src={catSearchImageUrl} alt="" className="w-12 h-12 object-contain rounded-full ring-1 ring-black/5 bg-muted" />
-                </div>
-              )}
+              <div className="flex items-center gap-3">
+                <label className="flex-1 cursor-pointer">
+                  <div className="flex items-center justify-center gap-2 px-4 py-2.5 border border-dashed border-muted-foreground/25 rounded-lg hover:border-primary/50 hover:bg-muted/50 transition-colors">
+                    <ImagePlus className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">اختر صورة</span>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setCatSearchImageFile(file);
+                  }} />
+                </label>
+                {catSearchImageFile && (
+                  <div className="relative">
+                    <img src={URL.createObjectURL(catSearchImageFile)} alt="" className="w-14 h-14 object-contain rounded-full ring-1 ring-black/5 bg-muted" />
+                    <button type="button" onClick={() => setCatSearchImageFile(null)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
+                  </div>
+                )}
+                {!catSearchImageFile && catSearchImageUrl && (
+                  <div className="relative">
+                    <img src={catSearchImageUrl} alt="" className="w-14 h-14 object-contain rounded-full ring-1 ring-black/5 bg-muted" />
+                    <button type="button" onClick={() => setCatSearchImageUrl("")} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
+                  </div>
+                )}
+              </div>
+              <Input value={catSearchImageUrl} onChange={(e) => { setCatSearchImageUrl(e.target.value); setCatSearchImageFile(null); }} placeholder="أو الصق رابط الصورة هنا..." className="mt-1 text-xs" />
             </div>
 
             <div className="space-y-2">
