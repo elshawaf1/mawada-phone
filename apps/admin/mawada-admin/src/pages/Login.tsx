@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
@@ -18,7 +18,7 @@ export default function Login() {
       await login(email, password);
     } catch (err: any) {
       console.error("Login failed:", err);
-      const message = err?.message || err?.error_description || JSON.stringify(err) || "فشل تسجيل الدخول";
+      const message = err?.message || err?.error_description || "فشل تسجيل الدخول";
       setError(message);
     } finally {
       setLoading(false);
@@ -26,73 +26,83 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[hsl(222,47%,8%)] via-[hsl(222,47%,11%)] to-[hsl(210,100%,15%)] flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.08),transparent_60%)]" />
-      <div className="w-full max-w-md relative">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl shadow-lg shadow-primary/20 mb-5 overflow-hidden ring-2 ring-white/10">
-            <img src="/logo.png" alt="موعدة فون" className="w-full h-full object-cover" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-1">موعدة فون</h1>
-          <p className="text-white/50 text-sm">لوحة تحكم الإدارة</p>
+    <div className="min-h-screen bg-[#020408] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(99,102,241,0.06),transparent_60%)]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[radial-gradient(ellipse,rgba(99,102,241,0.04),transparent_70%)]" />
+
+      <div className="w-full max-w-[380px] relative z-10">
+        <div className="text-center mb-10">
+          <h1 className="text-[28px] font-semibold text-white tracking-tight" style={{ fontFamily: "'Inter', 'Tajawal', sans-serif" }}>
+            موعدة فون
+          </h1>
+          <p className="text-[#64748B] text-[13px] mt-1.5 tracking-wide">لوحة تحكم الإدارة</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/20">
-          <h2 className="text-xl font-bold text-white mb-6 text-center">تسجيل الدخول</h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">البريد الإلكتروني أو الهاتف</label>
-              <div className="relative">
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@mawadaphone.com"
-                  required
-                  className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-xl px-4 py-3 pr-10 outline-none focus:border-primary/60 focus:bg-white/10 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)] transition-all text-sm"
-                />
-              </div>
+        <div className="bg-[#0A0F1A]/80 backdrop-blur-2xl border border-[rgba(255,255,255,0.04)] rounded-2xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="block text-[13px] font-medium text-[#94A3B8] text-right">البريد الإلكتروني</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                dir="ltr"
+                required
+                className="w-full bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#334155] rounded-xl px-4 py-3 outline-none focus:border-[rgba(99,102,241,0.4)] focus:bg-[rgba(255,255,255,0.05)] transition-all text-[14px] tracking-wide"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">كلمة المرور</label>
+            <div className="space-y-1.5">
+              <label className="block text-[13px] font-medium text-[#94A3B8] text-right">كلمة المرور</label>
               <div className="relative">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  dir="ltr"
                   required
-                  className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 rounded-xl px-4 py-3 pr-10 pl-10 outline-none focus:border-primary/60 focus:bg-white/10 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)] transition-all text-sm"
+                  className="w-full bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#334155] rounded-xl px-4 py-3 pl-11 outline-none focus:border-[rgba(99,102,241,0.4)] focus:bg-[rgba(255,255,255,0.05)] transition-all text-[14px] tracking-wide"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#94A3B8] transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                 </button>
               </div>
             </div>
 
             {error && (
-              <div className="bg-destructive/15 border border-destructive/30 text-red-300 text-sm rounded-xl px-4 py-2.5 text-center">
+              <p className="text-[#EF4444] text-[12px] text-center leading-relaxed py-0.5">
                 {error}
-              </div>
+              </p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded-xl transition-all duration-200 disabled:opacity-60 mt-2 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]"
+              className="w-full bg-white hover:bg-white/90 text-[#020408] font-semibold text-[14px] py-3 rounded-xl transition-all duration-200 disabled:opacity-40 mt-1 flex items-center justify-center gap-2 active:scale-[0.98]"
             >
-              {loading ? "جاري الدخول..." : "تسجيل الدخول"}
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-[#020408]/20 border-t-[#020408] rounded-full animate-spin" />
+              ) : (
+                <>
+                  تسجيل الدخول
+                  <ArrowLeft className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         </div>
+
+        <p className="text-center text-[#334155] text-[11px] mt-8">
+          Mawada Phone &copy; {new Date().getFullYear()}
+        </p>
       </div>
     </div>
   );
