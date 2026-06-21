@@ -165,7 +165,7 @@ export default function Notifications() {
 
     setSending(true);
     try {
-      const { data, error: invokeError } = await supabaseAdmin.functions.invoke("notification-broadcast", {
+      const { data, error: invokeError } = await supabase.functions.invoke("notification-broadcast", {
         body: {
           title: title || titleAr,
           titleAr: titleAr || title,
