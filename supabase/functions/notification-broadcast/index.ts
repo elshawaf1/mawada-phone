@@ -158,7 +158,7 @@ serve(async (req) => {
       return fail(`Invalid type "${type}". Must be one of: ${VALID_TYPES.join(', ')}`)
     }
 
-    const baseNotification = {
+    const baseNotification: Record<string, unknown> = {
       title: title || '',
       titleAr: titleAr || title || '',
       body: body || '',
@@ -167,12 +167,14 @@ serve(async (req) => {
       sentBy: adminUserId,
     }
 
+    if (orderId) baseNotification.orderId = orderId
+
     const notifMap = new Map<string, string>()
 
     if (targetUserId) {
       const { data: inserted, error: insertErr } = await admin
         .from('notifications')
-        .insert({ ...baseNotification, userId: targetUserId, orderId: orderId || null })
+        .insert({ ...baseNotification, userId: targetUserId })
         .select('id, "userId"')
         .single()
       if (insertErr) return fail(insertErr.message)
@@ -185,7 +187,7 @@ serve(async (req) => {
       if (usersErr) return fail(usersErr.message)
 
       if (users && users.length > 0) {
-        const rows = users.map((u) => ({ ...baseNotification, userId: u.id, orderId: orderId || null }))
+        const rows = users.map((u) => ({ ...baseNotification, userId: u.id }))
         const { data: inserted, error: insertErr } = await admin
           .from('notifications')
           .insert(rows)
