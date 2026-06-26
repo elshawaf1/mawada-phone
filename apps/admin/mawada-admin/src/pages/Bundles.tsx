@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, X, Loader2, MoreHorizontal, Boxes, Eye, EyeOff, Package, Percent } from "lucide-react";
+import { Plus, Search, Edit, Trash2, X, Loader2, MoreHorizontal, Boxes, Eye, EyeOff, Package, Settings2 } from "lucide-react";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +27,14 @@ interface Product {
   product_images?: { id: string; url: string; isPrimary: boolean }[];
 }
 
+interface BundleItemConfig {
+  product_id: string;
+  role: "main" | "addon";
+  custom_name: string;
+  custom_price: string;
+  sort_order: number;
+}
+
 interface Bundle {
   id: string;
   name: string;
@@ -39,8 +47,7 @@ interface Bundle {
   is_active: boolean;
   sort_order: number;
   created_at: string;
-  main_product?: Product;
-  addon_products?: Product[];
+  bundle_items?: { product_id: string; role: string; custom_name: string | null; custom_price: number | null }[];
 }
 
 export default function Bundles() {
@@ -59,39 +66,30 @@ export default function Bundles() {
   const [nameAr, setNameAr] = useState("");
   const [description, setDescription] = useState("");
   const [descriptionAr, setDescriptionAr] = useState("");
-  const [mainProductId, setMainProductId] = useState("");
-  const [addonProductIds, setAddonProductIds] = useState<string[]>([]);
-  const [discountPercent, setDiscountPercent] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [sortOrder, setSortOrder] = useState(0);
+  const [bundleItems, setBundleItems] = useState<BundleItemConfig[]>([]);
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [bundlesRes, productsRes] = await Promise.all([
-        supabaseAdmin
-          .from("product_bundles")
-          .select("*")
-          .order("sort_order", { ascending: true }),
-        supabaseAdmin
-          .from("products")
-          .select("id, name, nameAr, basePrice, salePrice, isOnSale, product_images(id, url, isPrimary)")
-          .eq("isActive", true)
-          .order("nameAr"),
+      const [bundlesRes, productsRes, itemsRes] = await Promise.all([
+        supabaseAdmin.from("product_bundles").select("*").order("sort_order", { ascending: true }),
+        supabaseAdmin.from("products").select("id, name, nameAr, basePrice, salePrice, isOnSale, product_images(id, url, isPrimary)").eq("isActive", true).order("nameAr"),
+        supabaseAdmin.from("bundle_items").select("*"),
       ]);
 
-      const bundlesData = bundlesRes.data || [];
       const allProducts = productsRes.data || [];
+      const allItems = itemsRes.data || [];
 
-      const enrichedBundles = bundlesData.map((bundle) => {
-        const mainProduct = allProducts.find((p) => p.id === bundle.main_product_id);
-        const addons = allProducts.filter((p) => bundle.addon_product_ids?.includes(p.id));
-        return { ...bundle, main_product: mainProduct, addon_products: addons };
+      const enriched = (bundlesRes.data || []).map((bundle) => {
+        const items = allItems.filter((i) => i.bundle_id === bundle.id);
+        return { ...bundle, bundle_items: items };
       });
 
-      setBundles(enrichedBundles);
+      setBundles(enriched);
       setProducts(allProducts);
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -102,8 +100,7 @@ export default function Bundles() {
 
   const resetForm = () => {
     setName(""); setNameAr(""); setDescription(""); setDescriptionAr("");
-    setMainProductId(""); setAddonProductIds([]); setDiscountPercent(0);
-    setIsActive(true); setSortOrder(0);
+    setIsActive(true); setSortOrder(0); setBundleItems([]);
     setEditingBundle(null);
   };
 
@@ -113,11 +110,17 @@ export default function Bundles() {
     setNameAr(bundle.name_ar);
     setDescription(bundle.description || "");
     setDescriptionAr(bundle.description_ar || "");
-    setMainProductId(bundle.main_product_id);
-    setAddonProductIds(bundle.addon_product_ids || []);
-    setDiscountPercent(bundle.discount_percent);
     setIsActive(bundle.is_active);
     setSortOrder(bundle.sort_order);
+
+    const items: BundleItemConfig[] = (bundle.bundle_items || []).map((bi) => ({
+      product_id: bi.product_id,
+      role: bi.role as "main" | "addon",
+      custom_name: bi.custom_name || "",
+      custom_price: bi.custom_price != null ? String(bi.custom_price) : "",
+      sort_order: 0,
+    }));
+    setBundleItems(items);
     setShowForm(true);
   };
 
@@ -126,48 +129,60 @@ export default function Bundles() {
       toast({ title: "خطأ", description: "اسم الباقة بالعربية مطلوب", variant: "destructive" });
       return;
     }
-    if (!mainProductId) {
-      toast({ title: "خطأ", description: "اختر المنتج الرئيسي", variant: "destructive" });
+
+    const mainItems = bundleItems.filter((i) => i.role === "main");
+    if (mainItems.length === 0) {
+      toast({ title: "خطأ", description: "اختر منتجاً واحداً على الأقل كمنتج رئيسي", variant: "destructive" });
       return;
     }
-    if (addonProductIds.length === 0) {
-      toast({ title: "خطأ", description: "اختر منتجاً واحداً على الأقل كإضافة", variant: "destructive" });
-      return;
-    }
-    if (discountPercent < 0 || discountPercent > 100) {
-      toast({ title: "خطأ", description: "نسبة الخصم يجب أن تكون بين 0 و 100", variant: "destructive" });
+    if (bundleItems.length < 2) {
+      toast({ title: "خطأ", description: "يجب إضافة منتجين على الأقل في الباقة", variant: "destructive" });
       return;
     }
 
     setSaving(true);
     try {
+      const mainProductId = mainItems[0].product_id;
+      const addonIds = bundleItems.filter((i) => i.role === "addon").map((i) => i.product_id);
+
       const bundleData = {
         name: name || nameAr,
         name_ar: nameAr,
         description: description || null,
         description_ar: descriptionAr || null,
         main_product_id: mainProductId,
-        addon_product_ids: addonProductIds,
-        discount_percent: discountPercent,
+        addon_product_ids: addonIds,
         is_active: isActive,
         sort_order: sortOrder,
       };
 
+      let bundleId = editingBundle?.id;
+
       if (editingBundle) {
-        const { error } = await supabaseAdmin
-          .from("product_bundles")
-          .update(bundleData)
-          .eq("id", editingBundle.id);
+        const { error } = await supabaseAdmin.from("product_bundles").update(bundleData).eq("id", editingBundle.id);
         if (error) throw error;
-        toast({ title: "تم", description: "تم تعديل الباقة بنجاح" });
+        await supabaseAdmin.from("bundle_items").delete().eq("bundle_id", editingBundle.id);
       } else {
-        const { error } = await supabaseAdmin
-          .from("product_bundles")
-          .insert(bundleData);
+        const { data: newBundle, error } = await supabaseAdmin.from("product_bundles").insert(bundleData).select().single();
         if (error) throw error;
-        toast({ title: "تم", description: "تم إضافة الباقة بنجاح" });
+        bundleId = newBundle.id;
       }
 
+      const itemsToInsert = bundleItems.map((item, idx) => ({
+        bundle_id: bundleId,
+        product_id: item.product_id,
+        role: item.role,
+        custom_name: item.custom_name || null,
+        custom_price: item.custom_price ? Number(item.custom_price) : null,
+        sort_order: idx,
+      }));
+
+      if (itemsToInsert.length > 0) {
+        const { error: itemsError } = await supabaseAdmin.from("bundle_items").insert(itemsToInsert);
+        if (itemsError) throw itemsError;
+      }
+
+      toast({ title: "تم", description: editingBundle ? "تم تعديل الباقة بنجاح" : "تم إضافة الباقة بنجاح" });
       setShowForm(false);
       resetForm();
       fetchData();
@@ -178,10 +193,7 @@ export default function Bundles() {
     }
   };
 
-  const confirmDelete = (id: string) => {
-    setDeletingId(id);
-    setShowDeleteDialog(true);
-  };
+  const confirmDelete = (id: string) => { setDeletingId(id); setShowDeleteDialog(true); };
 
   const handleDelete = async () => {
     if (!deletingId) return;
@@ -200,10 +212,7 @@ export default function Bundles() {
 
   const toggleActive = async (bundle: Bundle) => {
     try {
-      await supabaseAdmin
-        .from("product_bundles")
-        .update({ is_active: !bundle.is_active })
-        .eq("id", bundle.id);
+      await supabaseAdmin.from("product_bundles").update({ is_active: !bundle.is_active }).eq("id", bundle.id);
       fetchData();
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -211,23 +220,60 @@ export default function Bundles() {
   };
 
   const toggleAddon = (productId: string) => {
-    setAddonProductIds((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
+    setBundleItems((prev) => {
+      const exists = prev.find((i) => i.product_id === productId);
+      if (exists) {
+        return prev.filter((i) => i.product_id !== productId);
+      }
+      return [...prev, { product_id: productId, role: "addon", custom_name: "", custom_price: "", sort_order: prev.length }];
+    });
+  };
+
+  const setMainProduct = (productId: string) => {
+    setBundleItems((prev) => {
+      const withoutNewMain = prev.filter((i) => i.role !== "main");
+      return [...withoutNewMain, { product_id: productId, role: "main", custom_name: "", custom_price: "", sort_order: 0 }];
+    });
+  };
+
+  const updateItemConfig = (productId: string, field: "custom_name" | "custom_price", value: string) => {
+    setBundleItems((prev) =>
+      prev.map((i) => (i.product_id === productId ? { ...i, [field]: value } : i))
     );
   };
 
   const productImage = (product?: Product) =>
     product?.product_images?.find((img) => img.isPrimary)?.url ||
-    product?.product_images?.[0]?.url ||
-    null;
+    product?.product_images?.[0]?.url || null;
+
+  const getBundleTotal = (bundle: Bundle) => {
+    const items = bundle.bundle_items || [];
+    let total = 0;
+    items.forEach((bi) => {
+      if (bi.custom_price != null) {
+        total += bi.custom_price;
+      } else {
+        const p = products.find((pp) => pp.id === bi.product_id);
+        if (p) total += p.isOnSale && p.salePrice ? p.salePrice : p.basePrice;
+      }
+    });
+    return total;
+  };
+
+  const getOriginalTotal = (bundle: Bundle) => {
+    const items = bundle.bundle_items || [];
+    let total = 0;
+    items.forEach((bi) => {
+      const p = products.find((pp) => pp.id === bi.product_id);
+      if (p) total += p.isOnSale && p.salePrice ? p.salePrice : p.basePrice;
+    });
+    return total;
+  };
 
   const filtered = bundles.filter(
     (b) =>
       b.name_ar.toLowerCase().includes(search.toLowerCase()) ||
-      b.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.main_product?.nameAr?.toLowerCase().includes(search.toLowerCase())
+      b.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -236,35 +282,24 @@ export default function Bundles() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Boxes className="w-6 h-6 text-primary" />
-            البندل
+            الباقات
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">إنشاء وإدارة باقات المنتجات</p>
+          <p className="text-muted-foreground text-sm mt-1">إنشاء وإدارة باقات المنتجات مع تسعير مخصص</p>
         </div>
-        <Button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-xl gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          إضافة باقة
+        <Button onClick={() => { resetForm(); setShowForm(true); }} className="rounded-xl gap-2">
+          <Plus className="w-4 h-4" /> إضافة باقة
         </Button>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="بحث في البندل..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pr-10 rounded-xl"
-        />
+        <Input placeholder="بحث في الباقات..." value={search} onChange={(e) => setSearch(e.target.value)} className="pr-10 rounded-xl" />
       </div>
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-4 h-20 bg-muted/30 rounded-xl" />
-            </Card>
+            <Card key={i} className="animate-pulse"><CardContent className="p-4 h-20 bg-muted/30 rounded-xl" /></Card>
           ))}
         </div>
       ) : (
@@ -275,9 +310,9 @@ export default function Bundles() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-right">الباقة</TableHead>
-                    <TableHead className="text-right">المنتج الرئيسي</TableHead>
-                    <TableHead className="text-right">الإضافات</TableHead>
-                    <TableHead className="text-right">الخصم</TableHead>
+                    <TableHead className="text-right">المنتجات</TableHead>
+                    <TableHead className="text-right">السعر</TableHead>
+                    <TableHead className="text-right">التخفيض</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
                     <TableHead className="text-right w-12"></TableHead>
                   </TableRow>
@@ -291,46 +326,46 @@ export default function Bundles() {
                       </TableCell>
                     </TableRow>
                   ) : filtered.map((bundle) => {
-                    const mainImg = productImage(bundle.main_product);
+                    const mainImg = bundle.bundle_items?.find((i) => i.role === "main");
+                    const mainProduct = products.find((p) => p.id === mainImg?.product_id);
+                    const img = productImage(mainProduct);
+                    const total = getBundleTotal(bundle);
+                    const origTotal = getOriginalTotal(bundle);
+                    const discount = origTotal > 0 ? Math.round(((origTotal - total) / origTotal) * 100) : 0;
+                    const itemCount = bundle.bundle_items?.length || 0;
+
                     return (
                       <TableRow key={bundle.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            {mainImg && (
-                              <img src={mainImg} alt="" className="w-10 h-10 rounded-lg object-cover ring-1 ring-black/5" />
-                            )}
+                            {img && <img src={img} alt="" className="w-10 h-10 rounded-lg object-cover ring-1 ring-black/5" />}
                             <div>
                               <p className="font-medium text-sm">{bundle.name_ar}</p>
                               {bundle.name && <p className="text-xs text-muted-foreground">{bundle.name}</p>}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {bundle.main_product?.nameAr || "-"}
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs rounded-full">{itemCount} منتجات</Badge>
+                        </TableCell>
+                        <TableCell className="font-number text-sm">
+                          {total.toLocaleString("ar-EG")} ج
+                          {origTotal > total && (
+                            <span className="text-muted-foreground line-through text-[10px] mr-1">{origTotal.toLocaleString("ar-EG")}</span>
+                          )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Badge variant="secondary" className="text-xs rounded-full">
-                              {bundle.addon_products?.length || 0} منتجات
-                            </Badge>
-                          </div>
+                          {discount > 0 ? (
+                            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs rounded-full">-{discount}%</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs rounded-full font-number">
-                            <Percent className="w-3 h-3 ml-1" />
-                            {bundle.discount_percent}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <button
-                            onClick={() => toggleActive(bundle)}
-                            className={cn(
-                              "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border",
-                              bundle.is_active
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
-                            )}
-                          >
+                          <button onClick={() => toggleActive(bundle)} className={cn(
+                            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border",
+                            bundle.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                          )}>
                             {bundle.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                             {bundle.is_active ? "نشط" : "غير نشط"}
                           </button>
@@ -367,14 +402,18 @@ export default function Bundles() {
                   <p className="text-sm">لا توجد باقات</p>
                 </div>
               ) : filtered.map((bundle) => {
-                const mainImg = productImage(bundle.main_product);
+                const mainItem = bundle.bundle_items?.find((i) => i.role === "main");
+                const mainProduct = products.find((p) => p.id === mainItem?.product_id);
+                const img = productImage(mainProduct);
+                const total = getBundleTotal(bundle);
+                const origTotal = getOriginalTotal(bundle);
+                const discount = origTotal > 0 ? Math.round(((origTotal - total) / origTotal) * 100) : 0;
+
                 return (
                   <Card key={bundle.id} className="shadow-sm overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        {mainImg && (
-                          <img src={mainImg} alt="" className="w-16 h-16 rounded-lg object-cover ring-1 ring-black/5 shrink-0" />
-                        )}
+                        {img && <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover ring-1 ring-black/5 shrink-0" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-sm font-medium truncate">{bundle.name_ar}</p>
@@ -395,28 +434,21 @@ export default function Bundles() {
                             </DropdownMenu>
                           </div>
                           <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {bundle.main_product?.nameAr || "-"}
+                            {bundle.bundle_items?.length || 0} منتجات
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-1.5">
-                          <Badge variant="secondary" className="text-[11px] rounded-full">
-                            +{bundle.addon_products?.length || 0} إضافات
-                          </Badge>
-                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] rounded-full font-number">
-                            -{bundle.discount_percent}%
-                          </Badge>
-                        </div>
-                        <button
-                          onClick={() => toggleActive(bundle)}
-                          className={cn(
-                            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border",
-                            bundle.is_active
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                              : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                          <span className="font-number text-sm font-medium">{total.toLocaleString("ar-EG")} ج</span>
+                          {discount > 0 && (
+                            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] rounded-full">-{discount}%</Badge>
                           )}
-                        >
+                        </div>
+                        <button onClick={() => toggleActive(bundle)} className={cn(
+                          "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border",
+                          bundle.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                        )}>
                           {bundle.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                           {bundle.is_active ? "نشط" : "غير نشط"}
                         </button>
@@ -432,61 +464,44 @@ export default function Bundles() {
 
       {/* Bundle Form Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); resetForm(); } }}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg">{editingBundle ? "تعديل الباقة" : "إضافة باقة جديدة"}</DialogTitle>
             <DialogDescription>{editingBundle ? "قم بتعديل بيانات الباقة" : "أضف باقة منتجات جديدة"}</DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="basic" className="mt-2">
-            <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/50 rounded-xl">
+            <TabsList className="grid w-full grid-cols-3 p-1 bg-muted/50 rounded-xl">
               <TabsTrigger value="basic" className="rounded-lg text-sm">أساسي</TabsTrigger>
               <TabsTrigger value="products" className="rounded-lg text-sm">المنتجات</TabsTrigger>
+              <TabsTrigger value="customize" className="rounded-lg text-sm gap-1"><Settings2 className="w-3.5 h-3.5" /> التسعير</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">الاسم (العربية) *</Label>
-                  <Input value={nameAr} onChange={(e) => setNameAr(e.target.value)} placeholder="أكمل معداتك" className="bg-muted/30 focus:bg-background" />
+                  <Input value={nameAr} onChange={(e) => setNameAr(e.target.value)} placeholder="عرض مودة" className="bg-muted/30 focus:bg-background" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Name (English)</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Complete Your Setup" className="bg-muted/30 focus:bg-background" />
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Mawda Offer" className="bg-muted/30 focus:bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">الوصف (العربية)</Label>
-                  <Textarea value={descriptionAr} onChange={(e) => setDescriptionAr(e.target.value)} rows={2} className="bg-muted/30 focus:bg-background resize-none" />
+                  <Textarea value={descriptionAr} onChange={(e) => setDescriptionAr(e.target.value)} rows={2} className="bg-muted/30 focus:bg-background resize-none" placeholder="وفّر عند شراء هذه المنتجات معاً" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Description (English)</Label>
-                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="bg-muted/30 focus:bg-background resize-none" />
+                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="bg-muted/30 focus:bg-background resize-none" placeholder="Save when you buy these products together" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">نسبة الخصم (%) *</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={100}
-                    value={discountPercent || ""}
-                    onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                    className="bg-muted/30 focus:bg-background font-number"
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">الترتيب</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(Number(e.target.value))}
-                    className="bg-muted/30 focus:bg-background font-number"
-                  />
+                  <Input type="number" inputMode="numeric" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} className="bg-muted/30 focus:bg-background font-number" />
                 </div>
                 <div className="flex items-end gap-2 pb-1">
                   <Switch checked={isActive} onCheckedChange={setIsActive} id="isActive" />
@@ -497,64 +512,38 @@ export default function Bundles() {
 
             <TabsContent value="products" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">المنتج الرئيسي *</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-xl p-2">
+                <Label className="text-sm font-medium">
+                  المنتجات في الباقة * <span className="text-muted-foreground font-normal">({bundleItems.length} محدد)</span>
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-80 overflow-y-auto border rounded-xl p-2">
                   {products.map((product) => {
                     const img = productImage(product);
-                    const isSelected = mainProductId === product.id;
-                    const isAddon = addonProductIds.includes(product.id);
-                    return (
-                      <button
-                        key={product.id}
-                        disabled={isAddon}
-                        onClick={() => setMainProductId(product.id)}
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-lg border transition-all text-right",
-                          isSelected
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                            : isAddon
-                              ? "border-muted opacity-50 cursor-not-allowed"
-                              : "border-border hover:border-primary/40 hover:bg-muted/30"
-                        )}
-                      >
-                        {img ? (
-                          <img src={img} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <Package className="w-4 h-4 text-muted-foreground/40" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate">{product.nameAr}</p>
-                          <p className="text-[10px] text-muted-foreground font-number">
-                            {product.basePrice.toLocaleString("ar-EG")} ج
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <Badge className="bg-primary text-primary-foreground text-[10px] rounded-full shrink-0">رئيسي</Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                    const config = bundleItems.find((i) => i.product_id === product.id);
+                    const isMain = config?.role === "main";
+                    const isAddon = config?.role === "addon";
+                    const isSelected = !!config;
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  المنتجات الإضافية * <span className="text-muted-foreground font-normal">({addonProductIds.length} محدد)</span>
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto border rounded-xl p-2">
-                  {products.filter((p) => p.id !== mainProductId).map((product) => {
-                    const img = productImage(product);
-                    const isSelected = addonProductIds.includes(product.id);
                     return (
                       <button
                         key={product.id}
-                        onClick={() => toggleAddon(product.id)}
+                        onClick={() => {
+                          if (isSelected) {
+                            setBundleItems((prev) => prev.filter((i) => i.product_id !== product.id));
+                          } else {
+                            const hasMain = bundleItems.some((i) => i.role === "main");
+                            setBundleItems((prev) => [...prev, {
+                              product_id: product.id,
+                              role: hasMain ? "addon" : "main",
+                              custom_name: "",
+                              custom_price: "",
+                              sort_order: prev.length,
+                            }]);
+                          }
+                        }}
                         className={cn(
                           "flex items-center gap-2 p-2 rounded-lg border transition-all text-right",
-                          isSelected
-                            ? "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200"
+                          isMain ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : isAddon ? "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200"
                             : "border-border hover:border-primary/40 hover:bg-muted/30"
                         )}
                       >
@@ -567,34 +556,82 @@ export default function Bundles() {
                         )}
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium truncate">{product.nameAr}</p>
-                          <p className="text-[10px] text-muted-foreground font-number">
-                            {product.basePrice.toLocaleString("ar-EG")} ج
-                          </p>
+                          <p className="text-[10px] text-muted-foreground font-number">{product.basePrice.toLocaleString("ar-EG")} ج</p>
                         </div>
-                        <div className={cn(
-                          "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
-                          isSelected
-                            ? "border-emerald-500 bg-emerald-500"
-                            : "border-gray-300"
-                        )}>
-                          {isSelected && (
-                            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          )}
-                        </div>
+                        {isMain && <Badge className="bg-primary text-primary-foreground text-[10px] rounded-full shrink-0">رئيسي</Badge>}
+                        {isAddon && <Badge className="bg-emerald-100 text-emerald-700 text-[10px] rounded-full shrink-0">إضافة</Badge>}
                       </button>
                     );
                   })}
                 </div>
               </div>
             </TabsContent>
+
+            <TabsContent value="customize" className="space-y-4 mt-4">
+              {bundleItems.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">أضف منتجات أولاً من تبويب "المنتجات"</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">خصّص اسم وسعر كل منتج في الباقة. اترك الحقول فارغة لاستخدام القيم الأصلية.</p>
+                  {bundleItems.map((item, idx) => {
+                    const product = products.find((p) => p.id === item.product_id);
+                    if (!product) return null;
+                    const img = productImage(product);
+                    const originalPrice = product.isOnSale && product.salePrice ? product.salePrice : product.basePrice;
+
+                    return (
+                      <div key={item.product_id} className="flex items-center gap-3 p-3 border rounded-xl bg-muted/20">
+                        {img && <img src={img} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{product.nameAr}</p>
+                          <p className="text-[10px] text-muted-foreground">السعر الأصلي: {originalPrice.toLocaleString("ar-EG")} ج</p>
+                        </div>
+                        <div className="flex flex-col gap-2 shrink-0 w-40">
+                          <Input
+                            placeholder={`الاسم: ${product.nameAr}`}
+                            value={item.custom_name}
+                            onChange={(e) => updateItemConfig(item.product_id, "custom_name", e.target.value)}
+                            className="h-8 text-xs rounded-lg"
+                          />
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder={`السعر: ${originalPrice}`}
+                            value={item.custom_price}
+                            onChange={(e) => updateItemConfig(item.product_id, "custom_price", e.target.value)}
+                            className="h-8 text-xs rounded-lg font-number"
+                          />
+                        </div>
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => updateItemConfig(item.product_id, "role", item.role === "main" ? "addon" : "main")}
+                            className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full border font-medium",
+                              item.role === "main" ? "bg-primary text-primary-foreground" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            )}
+                          >
+                            {item.role === "main" ? "رئيسي" : "إضافة"}
+                          </button>
+                          <button
+                            onClick={() => setBundleItems((prev) => prev.filter((i) => i.product_id !== item.product_id))}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
           </Tabs>
 
           <DialogFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }} className="rounded-xl">
-              إلغاء
-            </Button>
+            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }} className="rounded-xl">إلغاء</Button>
             <Button onClick={saveBundle} disabled={saving} className="rounded-xl gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {editingBundle ? "حفظ التعديلات" : "إضافة الباقة"}
@@ -603,20 +640,15 @@ export default function Bundles() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>حذف الباقة</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من حذف هذه الباقة؟ لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
+            <AlertDialogDescription>هل أنت متأكد من حذف هذه الباقة؟ لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
             <AlertDialogCancel className="rounded-xl">إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-red-600 hover:bg-red-700">
-              حذف
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
