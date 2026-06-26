@@ -1,55 +1,80 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabaseAdmin } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Trash2, Link2, Package, ArrowUpDown, GripVertical } from "lucide-react";
+import { Plus, Search, Trash2, Link2, Package, ArrowUp, ArrowDown, ChevronDown, ChevronLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SkeletonTable } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-interface Product { id: string; name: string; nameAr: string; categoryId: string | null; showRelatedProducts?: boolean; product_images?: { url: string; isPrimary: boolean }[]; }
-interface RelatedProduct { id: string; productId: string; relatedProductId: string; sortOrder: number; products?: Product; }
+interface Product {
+  id: string;
+  name: string;
+  nameAr: string;
+  categoryId: string | null;
+  showRelatedProducts?: boolean;
+  product_images?: { url: string; isPrimary: boolean }[];
+}
 
-const productImage = (p: Product) => p.product_images?.find(i => i.isPrimary)?.url || p.product_images?.[0]?.url;
+interface RelatedRow {
+  id: string;
+  productId: string;
+  relatedProductId: string;
+  sortOrder: number;
+  products?: Product;
+}
+
+const productImage = (p: Product) =>
+  p.product_images?.find((i) => i.isPrimary)?.url || p.product_images?.[0]?.url;
 
 export default function RelatedProducts() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [relatedItems, setRelatedItems] = useState<RelatedProduct[]>([]);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [relatedCounts, setRelatedCounts] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<RelatedRow[]>([]);
+  const [loadingExpanded, setLoadingExpanded] = useState(false);
+
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addingToId, setAddingToId] = useState<string>("");
   const [addSearch, setAddSearch] = useState("");
   const [saving, setSaving] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; item: RelatedProduct | null }>({ open: false, item: null });
-  const [showRelated, setShowRelated] = useState(false);
 
-  useEffect(() => { fetchProducts(); }, []);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; item: RelatedRow | null }>({
+    open: false,
+    item: null,
+  });
 
   useEffect(() => {
-    if (selectedProductId) {
-      fetchRelated();
-      const p = products.find(p => p.id === selectedProductId);
-      setShowRelated(p?.showRelatedProducts || false);
-    }
-  }, [selectedProductId]);
+    fetchAll();
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchAll = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabaseAdmin.from("products")
-        .select("id, name, nameAr, categoryId, product_images(url, isPrimary)")
-        .eq("isActive", true)
-        .order("nameAr");
-      if (error) throw error;
-      setProducts(data || []);
+      const [productsRes, countsRes] = await Promise.all([
+        supabaseAdmin
+          .from("products")
+          .select("id, name, nameAr, categoryId, showRelatedProducts, product_images(url, isPrimary)")
+          .eq("isActive", true)
+          .order("nameAr"),
+        supabaseAdmin.from("product_related").select("productId"),
+      ]);
+
+      setProducts(productsRes.data || []);
+
+      const counts: Record<string, number> = {};
+      (countsRes.data || []).forEach((r: any) => {
+        counts[r.productId] = (counts[r.productId] || 0) + 1;
+      });
+      setRelatedCounts(counts);
     } catch (err: any) {
       toast({ title: "خطأ", description: err.message, variant: "destructive" });
     } finally {
@@ -57,42 +82,87 @@ export default function RelatedProducts() {
     }
   };
 
-  const fetchRelated = async () => {
+  const fetchExpandedItems = useCallback(async (productId: string) => {
     try {
-      const { data, error } = await supabaseAdmin.from("product_related")
+      setLoadingExpanded(true);
+      const { data, error } = await supabaseAdmin
+        .from("product_related")
         .select("*, products!product_related_relatedProductId_fkey(id, name, nameAr, product_images(url, isPrimary))")
-        .eq("productId", selectedProductId)
+        .eq("productId", productId)
         .order("sortOrder");
       if (error) throw error;
-      setRelatedItems(data || []);
-      setRelatedProducts((data || []).map((r: any) => r.products).filter(Boolean));
+      setExpandedItems(data || []);
     } catch (err: any) {
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+    } finally {
+      setLoadingExpanded(false);
+    }
+  }, []);
+
+  const toggleExpand = (productId: string) => {
+    if (expandedId === productId) {
+      setExpandedId(null);
+      setExpandedItems([]);
+    } else {
+      setExpandedId(productId);
+      fetchExpandedItems(productId);
+    }
+  };
+
+  const toggleShowRelated = async (productId: string, value: boolean) => {
+    try {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === productId ? { ...p, showRelatedProducts: value } : p))
+      );
+      const { error } = await supabaseAdmin
+        .from("products")
+        .update({ showRelatedProducts: value })
+        .eq("id", productId);
+      if (error) throw error;
+      toast({
+        title: "تم",
+        description: value ? "تم تفعيل المنتجات المشابهة" : "تم إخفاء المنتجات المشابهة",
+      });
+    } catch (err: any) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === productId ? { ...p, showRelatedProducts: !value } : p))
+      );
       toast({ title: "خطأ", description: err.message, variant: "destructive" });
     }
   };
 
+  const openAddDialog = (productId: string) => {
+    setAddingToId(productId);
+    setAddSearch("");
+    setAddDialogOpen(true);
+  };
+
   const addRelated = async (targetProduct: Product) => {
-    if (!selectedProductId) return;
-    if (targetProduct.id === selectedProductId) {
+    if (!addingToId) return;
+    if (targetProduct.id === addingToId) {
       toast({ title: "تنبيه", description: "لا يمكن إضافة المنتج نفسه", variant: "destructive" });
       return;
     }
-    if (relatedProducts.some(p => p.id === targetProduct.id)) {
+    if (expandedItems.some((r) => r.relatedProductId === targetProduct.id)) {
       toast({ title: "تنبيه", description: "المنتج مضاف بالفعل", variant: "destructive" });
       return;
     }
     try {
       setSaving(true);
       const { error } = await supabaseAdmin.from("product_related").insert({
-        productId: selectedProductId,
+        productId: addingToId,
         relatedProductId: targetProduct.id,
-        sortOrder: relatedItems.length,
+        sortOrder: expandedItems.length,
       });
       if (error) throw error;
       toast({ title: "تم", description: "تمت إضافة المنتج بنجاح" });
       setAddDialogOpen(false);
       setAddSearch("");
-      fetchRelated();
+      fetchExpandedItems(addingToId);
+      setRelatedCounts((prev) => ({
+        ...prev,
+        [addingToId]: (prev[addingToId] || 0) + 1,
+      }));
     } catch (err: any) {
       toast({ title: "خطأ", description: err.message, variant: "destructive" });
     } finally {
@@ -100,180 +170,253 @@ export default function RelatedProducts() {
     }
   };
 
-  const removeRelated = async (item: RelatedProduct) => {
+  const removeRelated = async (item: RelatedRow) => {
     try {
       const { error } = await supabaseAdmin.from("product_related").delete().eq("id", item.id);
       if (error) throw error;
       toast({ title: "تم", description: "تمت الإزالة بنجاح" });
       setDeleteDialog({ open: false, item: null });
-      fetchRelated();
+      fetchExpandedItems(item.productId);
+      setRelatedCounts((prev) => ({
+        ...prev,
+        [item.productId]: Math.max(0, (prev[item.productId] || 1) - 1),
+      }));
     } catch (err: any) {
       toast({ title: "خطأ", description: err.message, variant: "destructive" });
     }
   };
 
-  const moveItem = async (item: RelatedProduct, direction: "up" | "down") => {
-    const idx = relatedItems.findIndex(r => r.id === item.id);
+  const moveItem = async (item: RelatedRow, direction: "up" | "down") => {
+    const idx = expandedItems.findIndex((r) => r.id === item.id);
     if (idx < 0) return;
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= relatedItems.length) return;
-    const swapped = [...relatedItems];
+    if (swapIdx < 0 || swapIdx >= expandedItems.length) return;
+    const swapped = [...expandedItems];
     [swapped[idx], swapped[swapIdx]] = [swapped[swapIdx], swapped[idx]];
     try {
       const updates = swapped.map((r, i) =>
         supabaseAdmin.from("product_related").update({ sortOrder: i }).eq("id", r.id)
       );
       await Promise.all(updates);
-      setRelatedItems(swapped);
+      setExpandedItems(swapped);
     } catch (err: any) {
       toast({ title: "خطأ", description: err.message, variant: "destructive" });
     }
   };
 
-  const toggleShowRelated = async (value: boolean) => {
-    try {
-      setShowRelated(value);
-      const { error } = await supabaseAdmin.from("products").update({ showRelatedProducts: value }).eq("id", selectedProductId);
-      if (error) throw error;
-      toast({ title: "تم", description: value ? "تم تفعيل قسم المنتجات المشابهة" : "تم إخفاء قسم المنتجات المشابهة" });
-    } catch (err: any) {
-      setShowRelated(!value);
-      toast({ title: "خطأ", description: err.message, variant: "destructive" });
-    }
-  };
-
-  const filteredAdd = products.filter(p =>
-    p.id !== selectedProductId &&
-    !relatedProducts.some(r => r.id === p.id) &&
-    (p.nameAr?.includes(addSearch) || p.name?.toLowerCase().includes(addSearch.toLowerCase()))
+  const filteredAdd = products.filter(
+    (p) =>
+      p.id !== addingToId &&
+      !expandedItems.some((r) => r.relatedProductId === p.id) &&
+      (p.nameAr?.includes(addSearch) || p.name?.toLowerCase().includes(addSearch.toLowerCase()))
   );
 
-  const selectedProduct = products.find(p => p.id === selectedProductId);
+  const filteredProducts = products.filter(
+    (p) =>
+      p.nameAr?.includes(search) ||
+      p.name?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6" dir="rtl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">المنتجات المشابهة</h1>
-          <p className="text-sm text-muted-foreground mt-1">تحكم في منتجات "قد يعجبك ايضاً" لكل منتج</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Link2 className="w-6 h-6 text-primary" />
+            المنتجات المشابهة
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            تحكم في منتجات "قد يعجبك ايضاً" لكل منتج
+          </p>
         </div>
-        <Link2 className="w-6 h-6 text-muted-foreground" />
       </div>
 
-      {/* Product Selector */}
-      <Card borderless className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">اختر منتجاً</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-            <SelectTrigger className="w-full rounded-xl bg-muted/50 border-border/60 h-11">
-              <SelectValue placeholder="اختر منتجاً لإدارة منتجاته المشابهة..." />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {products.map(p => (
-                <SelectItem key={p.id} value={p.id}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted shrink-0">
-                      {productImage(p) ? (
-                        <img src={productImage(p)} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center"><Package className="w-3 h-3 text-muted-foreground/40" /></div>
-                      )}
-                    </div>
-                    <span>{p.nameAr}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <div className="relative max-w-sm">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="بحث في المنتجات..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pr-10 rounded-xl"
+        />
+      </div>
 
-      {/* Related Products List */}
-      {selectedProductId && (
-        <Card borderless className="shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                المنتجات المشابهة لـ "{selectedProduct?.nameAr}"
-              </CardTitle>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Switch checked={showRelated} onCheckedChange={toggleShowRelated} id="showRelatedToggle" />
-                  <Label htmlFor="showRelatedToggle" className="text-xs cursor-pointer text-muted-foreground">{showRelated ? "ظاهر" : "مخفي"}</Label>
-                </div>
-                <Badge variant="secondary" className="rounded-full text-xs font-number px-3">
-                  {relatedItems.length}
-                </Badge>
-                <Button size="sm" onClick={() => { setAddDialogOpen(true); setAddSearch(""); }} className="gap-1.5 rounded-xl">
-                  <Plus className="w-3.5 h-3.5" /> إضافة
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {loading ? (
-              <SkeletonTable />
-            ) : relatedItems.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Link2 className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">لم تتم إضافة منتجات مشابهة بعد</p>
-                <p className="text-xs mt-1">اضغط "إضافة" لبدء تحديد المنتجات المشابهة</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {relatedItems.map((item, idx) => {
-                  const p = item.products;
-                  if (!p) return null;
-                  return (
-                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <GripVertical className="w-4 h-4 text-muted-foreground/30 shrink-0" />
-                      <div className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-black/5 shrink-0 bg-muted">
-                        {productImage(p) ? (
-                          <img src={productImage(p)} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-4 h-4 text-muted-foreground/40" />
-                          </div>
-                        )}
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-4 h-16 bg-muted/30 rounded-xl" />
+            </Card>
+          ))}
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
+          <p className="text-sm">لا توجد منتجات</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredProducts.map((product) => {
+            const img = productImage(product);
+            const count = relatedCounts[product.id] || 0;
+            const isExpanded = expandedId === product.id;
+            const isVisible = product.showRelatedProducts || false;
+
+            return (
+              <Card key={product.id} className="shadow-sm overflow-hidden transition-all">
+                {/* Main Row */}
+                <button
+                  onClick={() => toggleExpand(product.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-4 text-right transition-colors hover:bg-muted/30",
+                    isExpanded && "bg-muted/20"
+                  )}
+                >
+                  <div className="w-12 h-12 rounded-xl overflow-hidden ring-1 ring-black/5 shrink-0 bg-muted">
+                    {img ? (
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="w-5 h-5 text-muted-foreground/40" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{p.nameAr}</p>
-                        {p.name && <p className="text-xs text-muted-foreground truncate">{p.name}</p>}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => moveItem(item, "up")}
-                          disabled={idx === 0}
-                          className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
-                          title="تحريك لأعلى"
-                        >
-                          <ArrowUpDown className="w-3.5 h-3.5 rotate-90" />
-                        </button>
-                        <button
-                          onClick={() => moveItem(item, "down")}
-                          disabled={idx === relatedItems.length - 1}
-                          className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
-                          title="تحريك لأسفل"
-                        >
-                          <ArrowUpDown className="w-3.5 h-3.5 -rotate-90" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteDialog({ open: true, item })}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
-                          title="إزالة"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0 text-right">
+                    <p className="text-sm font-medium truncate">{product.nameAr}</p>
+                    {product.name && (
+                      <p className="text-xs text-muted-foreground truncate">{product.name}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5">
+                      <Switch
+                        checked={isVisible}
+                        onCheckedChange={(v) => toggleShowRelated(product.id, v)}
+                        id={`toggle-${product.id}`}
+                      />
+                      <Label
+                        htmlFor={`toggle-${product.id}`}
+                        className="text-[10px] cursor-pointer text-muted-foreground"
+                      >
+                        {isVisible ? "ظاهر" : "مخفي"}
+                      </Label>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "rounded-full text-[11px] font-number px-2.5 min-w-[28px] text-center",
+                        count > 0
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {count}
+                    </Badge>
+
+                    <div
+                      className={cn(
+                        "transition-transform duration-200",
+                        isExpanded && "rotate-90"
+                      )}
+                    >
+                      <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="border-t bg-muted/10 px-4 pb-4">
+                    <div className="flex items-center justify-between pt-3 pb-2">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        المنتجات المشابهة ({expandedItems.length})
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => openAddDialog(product.id)}
+                        className="gap-1.5 rounded-xl h-8"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> إضافة
+                      </Button>
+                    </div>
+
+                    {loadingExpanded ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : expandedItems.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Link2 className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                        <p className="text-xs">لم تتم إضافة منتجات مشابهة بعد</p>
+                        <p className="text-[10px] mt-1 opacity-60">
+                          اضغط "إضافة" لبدء تحديد المنتجات المشابهة
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {expandedItems.map((item, idx) => {
+                          const p = item.products;
+                          if (!p) return null;
+                          const pImg = productImage(p);
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-3 p-2.5 rounded-xl bg-background hover:bg-muted/50 transition-colors border border-border/50"
+                            >
+                              <div className="w-10 h-10 rounded-lg overflow-hidden ring-1 ring-black/5 shrink-0 bg-muted">
+                                {pImg ? (
+                                  <img src={pImg} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package className="w-4 h-4 text-muted-foreground/40" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{p.nameAr}</p>
+                                {p.name && (
+                                  <p className="text-xs text-muted-foreground truncate">{p.name}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                <button
+                                  onClick={() => moveItem(item, "up")}
+                                  disabled={idx === 0}
+                                  className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
+                                  title="تحريك لأعلى"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => moveItem(item, "down")}
+                                  disabled={idx === expandedItems.length - 1}
+                                  className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
+                                  title="تحريك لأسفل"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteDialog({ open: true, item })}
+                                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                                  title="إزالة"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       {/* Add Dialog */}
@@ -299,7 +442,7 @@ export default function RelatedProducts() {
                 لا توجد نتائج
               </div>
             ) : (
-              filteredAdd.slice(0, 20).map(p => (
+              filteredAdd.slice(0, 30).map((p) => (
                 <button
                   key={p.id}
                   onClick={() => addRelated(p)}
@@ -317,7 +460,9 @@ export default function RelatedProducts() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{p.nameAr}</p>
-                    {p.name && <p className="text-xs text-muted-foreground truncate">{p.name}</p>}
+                    {p.name && (
+                      <p className="text-xs text-muted-foreground truncate">{p.name}</p>
+                    )}
                   </div>
                   <Plus className="w-4 h-4 text-primary shrink-0" />
                 </button>
@@ -327,16 +472,33 @@ export default function RelatedProducts() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, item: null })}>
+      {/* Delete Confirmation */}
+      <Dialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ open, item: null })}
+      >
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>إزالة منتج مشابه</DialogTitle>
-            <DialogDescription>هل أنت متأكد من إزالة "{deleteDialog.item?.products?.nameAr}" من المنتجات المشابهة؟</DialogDescription>
+            <DialogDescription>
+              هل أنت متأكد من إزالة "{deleteDialog.item?.products?.nameAr}" من المنتجات المشابهة؟
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog({ open: false, item: null })}>إلغاء</Button>
-            <Button variant="destructive" onClick={() => deleteDialog.item && removeRelated(deleteDialog.item)}>إزالة</Button>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: false, item: null })}
+              className="rounded-xl"
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteDialog.item && removeRelated(deleteDialog.item)}
+              className="rounded-xl"
+            >
+              إزالة
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
