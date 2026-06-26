@@ -62,11 +62,13 @@ export default function RelatedProducts() {
       const [productsRes, countsRes] = await Promise.all([
         supabaseAdmin
           .from("products")
-          .select("id, name, nameAr, categoryId, showRelatedProducts, product_images(url, isPrimary)")
+          .select("*, product_images(id, url, isPrimary)")
           .eq("isActive", true)
           .order("nameAr"),
         supabaseAdmin.from("product_related").select("productId"),
       ]);
+
+      if (productsRes.error) throw productsRes.error;
 
       setProducts(productsRes.data || []);
 
@@ -87,7 +89,7 @@ export default function RelatedProducts() {
       setLoadingExpanded(true);
       const { data, error } = await supabaseAdmin
         .from("product_related")
-        .select("*, products!product_related_relatedProductId_fkey(id, name, nameAr, product_images(url, isPrimary))")
+        .select("*, products!product_related_relatedProductId_fkey(*, product_images(id, url, isPrimary))")
         .eq("productId", productId)
         .order("sortOrder");
       if (error) throw error;
@@ -116,7 +118,7 @@ export default function RelatedProducts() {
       );
       const { error } = await supabaseAdmin
         .from("products")
-        .update({ showRelatedProducts: value })
+        .update({ "showRelatedProducts": value })
         .eq("id", productId);
       if (error) throw error;
       toast({
@@ -213,7 +215,8 @@ export default function RelatedProducts() {
 
   const filteredProducts = products.filter(
     (p) =>
-      p.nameAr?.includes(search) ||
+      !search ||
+      p.nameAr?.toLowerCase().includes(search.toLowerCase()) ||
       p.name?.toLowerCase().includes(search.toLowerCase())
   );
 
