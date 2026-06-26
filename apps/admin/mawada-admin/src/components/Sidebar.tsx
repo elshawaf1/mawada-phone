@@ -12,6 +12,7 @@ import {
   Link2,
   Bell,
   Settings,
+  FolderTree,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,13 +25,14 @@ interface SidebarProps {
 const navItems = [
   { href: "/", label: "لوحة التحكم", icon: LayoutDashboard },
   { href: "/products", label: "المنتجات", icon: Package },
+  { href: "/categories", label: "الفئات", icon: FolderTree },
   { href: "/bundles", label: "البندل", icon: Boxes },
   { href: "/related-products", label: "المنتجات المشابهة", icon: Link2 },
   { href: "/orders", label: "الطلبات", icon: ShoppingCart },
   { href: "/top-products", label: "الأكثر مبيعاً", icon: TrendingUp },
   { href: "/reports", label: "التقارير", icon: BarChart3 },
   { href: "/inventory", label: "المخزون", icon: PackageSearch },
-  { href: "/marketing", label: "التسويق", icon: Palette },
+  { href: "/marketing", label: "البانرات", icon: Palette },
   { href: "/notifications", label: "الإشعارات", icon: Bell },
   { href: "/settings", label: "الإعدادات", icon: Settings },
 ];
