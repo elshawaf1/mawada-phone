@@ -9,6 +9,7 @@ import {
   TrendingUp,
   BarChart3,
   PackageSearch,
+  Boxes,
   Search,
   Command,
   ArrowLeft,
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 const pages = [
   { href: "/", label: "لوحة التحكم", labelEn: "Dashboard", icon: LayoutDashboard, keywords: "main home overview stats" },
   { href: "/products", label: "المنتجات", labelEn: "Products", icon: Package, keywords: "items goods catalog" },
+  { href: "/bundles", label: "البندل", labelEn: "Bundles", icon: Boxes, keywords: "bundles packages deals offers" },
   { href: "/orders", label: "الطلبات", labelEn: "Orders", icon: ShoppingCart, keywords: "sales purchases transactions" },
   { href: "/notifications", label: "الإشعارات", labelEn: "Notifications", icon: Bell, keywords: "alerts messages" },
   { href: "/top-products", label: "الأكثر مبيعاً", labelEn: "Top Products", icon: TrendingUp, keywords: "bestsellers popular ranking" },

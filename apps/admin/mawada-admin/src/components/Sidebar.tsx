@@ -8,6 +8,7 @@ import {
   TrendingUp,
   BarChart3,
   PackageSearch,
+  Boxes,
   Bell,
   Settings,
   X,
@@ -22,6 +23,7 @@ interface SidebarProps {
 const navItems = [
   { href: "/", label: "لوحة التحكم", icon: LayoutDashboard },
   { href: "/products", label: "المنتجات", icon: Package },
+  { href: "/bundles", label: "البندل", icon: Boxes },
   { href: "/orders", label: "الطلبات", icon: ShoppingCart },
   { href: "/top-products", label: "الأكثر مبيعاً", icon: TrendingUp },
   { href: "/reports", label: "التقارير", icon: BarChart3 },

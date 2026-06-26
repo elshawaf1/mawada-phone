@@ -13,6 +13,7 @@ import Reports from "@/pages/Reports";
 import Inventory from "@/pages/Inventory";
 import Notifications from "@/pages/Notifications";
 import Settings from "@/pages/Settings";
+import Bundles from "@/pages/Bundles";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Layout from "@/components/Layout";
@@ -91,6 +92,7 @@ function AppRoutes() {
       <Route path="/login" component={LoginPage} />
       <Route path="/" component={() => <ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/products" component={() => <ProtectedRoute><Products /></ProtectedRoute>} />
+      <Route path="/bundles" component={() => <ProtectedRoute><Bundles /></ProtectedRoute>} />
       <Route path="/orders" component={() => <ProtectedRoute><Orders /></ProtectedRoute>} />
       <Route path="/marketing" component={() => <ProtectedRoute><Marketing /></ProtectedRoute>} />
       <Route path="/top-products" component={() => <ProtectedRoute><TopProducts /></ProtectedRoute>} />

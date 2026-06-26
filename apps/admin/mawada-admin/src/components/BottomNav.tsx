@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, PackageSearch, Bell } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, BarChart3, PackageSearch, Bell, Boxes } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "الرئيسية", icon: LayoutDashboard },
   { href: "/products", label: "المنتجات", icon: Package },
+  { href: "/bundles", label: "البندل", icon: Boxes },
   { href: "/orders", label: "الطلبات", icon: ShoppingCart },
   { href: "/reports", label: "التقارير", icon: BarChart3 },
   { href: "/inventory", label: "المخزون", icon: PackageSearch },
