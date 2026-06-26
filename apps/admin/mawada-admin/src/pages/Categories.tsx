@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import {
   Plus, Search, Edit, Trash2, ImagePlus, Loader2,
-  FolderTree, LayoutGrid, Link as LinkIcon, Upload,
+  FolderTree, Upload,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -36,13 +36,6 @@ interface Category {
   createdAt: string;
 }
 
-const commonIcons = [
-  "Smartphone", "Laptop", "Headphones", "Watch", "Tablet", "Camera",
-  "Monitor", "Speaker", "Gamepad2", "Mouse", "Keyboard", "Tv",
-  "Printer", "HardDrive", "Usb", "Battery", "Wifi", "Bluetooth",
-  "Shield", "Star", "Heart", "ShoppingBag", "Gift", "Tag",
-];
-
 export default function Categories() {
   const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -58,8 +51,6 @@ export default function Categories() {
   const [catName, setCatName] = useState("");
   const [catNameAr, setCatNameAr] = useState("");
   const [catSlug, setCatSlug] = useState("");
-  const [catIcon, setCatIcon] = useState("Smartphone");
-  const [catIconMode, setCatIconMode] = useState<"preset" | "url">("preset");
   const [catIconUrl, setCatIconUrl] = useState("");
   const [catIconFile, setCatIconFile] = useState<File | null>(null);
   const [catHomeImageUrl, setCatHomeImageUrl] = useState("");
@@ -100,8 +91,6 @@ export default function Categories() {
     setCatName("");
     setCatNameAr("");
     setCatSlug("");
-    setCatIcon("Smartphone");
-    setCatIconMode("preset");
     setCatIconUrl("");
     setCatIconFile(null);
     setCatHomeImageUrl("");
@@ -119,17 +108,11 @@ export default function Categories() {
     setCatName(cat.name || "");
     setCatNameAr(cat.nameAr);
     setCatSlug(cat.slug || "");
-    if (cat.icon && commonIcons.includes(cat.icon)) {
-      setCatIconMode("preset");
-      setCatIcon(cat.icon);
-      setCatIconUrl("");
-    } else if (cat.icon) {
-      setCatIconMode("url");
+    if (cat.icon && !commonIcons.includes(cat.icon)) {
       setCatIconUrl(cat.icon);
-      setCatIcon("Smartphone");
+    } else if (cat.icon) {
+      setCatIconUrl(cat.icon);
     } else {
-      setCatIconMode("preset");
-      setCatIcon("Smartphone");
       setCatIconUrl("");
     }
     setCatIconFile(null);
@@ -177,7 +160,7 @@ export default function Categories() {
         searchUrl = await handleImageUpload(catSearchImageFile, "category-images");
       }
 
-      let iconValue = catIconMode === "url" ? catIconUrl : catIcon;
+      let iconValue = catIconUrl;
       if (catIconFile) {
         iconValue = await handleImageUpload(catIconFile, "category-images");
       }
@@ -535,87 +518,42 @@ export default function Categories() {
             <TabsContent value="images" className="space-y-5 mt-4">
               <div className="space-y-3">
                 <Label className="text-sm font-semibold">الأيقونة</Label>
-                <div className="flex gap-2 mb-2">
-                  <button
-                    type="button"
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-                      catIconMode === "preset" ? "border-primary bg-primary/10 text-primary" : "border-muted hover:bg-muted"
-                    )}
-                    onClick={() => setCatIconMode("preset")}
-                  >
-                    أيقونة جاهزة
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-                      catIconMode === "url" ? "border-primary bg-primary/10 text-primary" : "border-muted hover:bg-muted"
-                    )}
-                    onClick={() => setCatIconMode("url")}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <LinkIcon className="w-3 h-3" />
-                      رابط / ملف
-                    </span>
-                  </button>
-                </div>
-                {catIconMode === "preset" ? (
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {commonIcons.map((icon) => (
-                      <button
-                        key={icon}
-                        type="button"
-                        className={cn(
-                          "p-2 rounded-lg border text-[11px] text-center transition-colors",
-                          catIcon === icon ? "border-primary bg-primary/10 text-primary font-medium" : "border-muted hover:bg-muted text-muted-foreground"
-                        )}
-                        onClick={() => setCatIcon(icon)}
-                      >
-                        {icon}
-                      </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Input
+                      value={catIconUrl}
+                      onChange={(e) => { setCatIconUrl(e.target.value); setCatIconFile(null); }}
+                      placeholder="https://example.com/icon.png"
+                      dir="ltr"
+                      className="text-left text-sm"
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <Input
-                          value={catIconUrl}
-                          onChange={(e) => { setCatIconUrl(e.target.value); setCatIconFile(null); }}
-                          placeholder="https://example.com/icon.png"
-                          dir="ltr"
-                          className="text-left text-sm"
-                        />
-                      </div>
-                      <label className="shrink-0 cursor-pointer">
-                        <div className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-muted-foreground/25 rounded-lg hover:border-primary/50 hover:bg-muted/50 transition-colors">
-                          <Upload className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">ملف</span>
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) { setCatIconFile(file); setCatIconUrl(""); }
-                          }}
-                        />
-                      </label>
+                  <label className="shrink-0 cursor-pointer">
+                    <div className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-muted-foreground/25 rounded-lg hover:border-primary/50 hover:bg-muted/50 transition-colors">
+                      <Upload className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">ملف</span>
                     </div>
-                    {catIconFile && (
-                      <div className="relative inline-block">
-                        <img src={URL.createObjectURL(catIconFile)} alt="" className="w-14 h-14 object-contain rounded-lg ring-1 ring-black/5 bg-muted" />
-                        <button type="button" onClick={() => setCatIconFile(null)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
-                      </div>
-                    )}
-                    {!catIconFile && catIconUrl && (
-                      <div className="relative inline-block">
-                        <img src={catIconUrl} alt="" className="w-14 h-14 object-contain rounded-lg ring-1 ring-black/5 bg-muted" />
-                        <button type="button" onClick={() => setCatIconUrl("")} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
-                      </div>
-                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) { setCatIconFile(file); setCatIconUrl(""); }
+                      }}
+                    />
+                  </label>
+                </div>
+                {catIconFile && (
+                  <div className="relative inline-block">
+                    <img src={URL.createObjectURL(catIconFile)} alt="" className="w-14 h-14 object-contain rounded-lg ring-1 ring-black/5 bg-muted" />
+                    <button type="button" onClick={() => setCatIconFile(null)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
+                  </div>
+                )}
+                {!catIconFile && catIconUrl && (
+                  <div className="relative inline-block">
+                    <img src={catIconUrl} alt="" className="w-14 h-14 object-contain rounded-lg ring-1 ring-black/5 bg-muted" />
+                    <button type="button" onClick={() => setCatIconUrl("")} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-destructive text-white rounded-full text-xs flex items-center justify-center">&times;</button>
                   </div>
                 )}
               </div>
