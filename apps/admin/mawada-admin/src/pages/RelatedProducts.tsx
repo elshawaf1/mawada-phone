@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Plus, Search, Trash2, Link2, Package, ArrowUpDown, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SkeletonTable } from "@/components/ui/skeleton";
 
-interface Product { id: string; name: string; nameAr: string; categoryId: string | null; product_images?: { url: string; isPrimary: boolean }[]; }
+interface Product { id: string; name: string; nameAr: string; categoryId: string | null; showRelatedProducts?: boolean; product_images?: { url: string; isPrimary: boolean }[]; }
 interface RelatedProduct { id: string; productId: string; relatedProductId: string; sortOrder: number; products?: Product; }
 
 const productImage = (p: Product) => p.product_images?.find(i => i.isPrimary)?.url || p.product_images?.[0]?.url;
@@ -27,11 +29,16 @@ export default function RelatedProducts() {
   const [addSearch, setAddSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; item: RelatedProduct | null }>({ open: false, item: null });
+  const [showRelated, setShowRelated] = useState(false);
 
   useEffect(() => { fetchProducts(); }, []);
 
   useEffect(() => {
-    if (selectedProductId) fetchRelated();
+    if (selectedProductId) {
+      fetchRelated();
+      const p = products.find(p => p.id === selectedProductId);
+      setShowRelated(p?.showRelatedProducts || false);
+    }
   }, [selectedProductId]);
 
   const fetchProducts = async () => {
@@ -123,6 +130,18 @@ export default function RelatedProducts() {
     }
   };
 
+  const toggleShowRelated = async (value: boolean) => {
+    try {
+      setShowRelated(value);
+      const { error } = await supabaseAdmin.from("products").update({ showRelatedProducts: value }).eq("id", selectedProductId);
+      if (error) throw error;
+      toast({ title: "تم", description: value ? "تم تفعيل قسم المنتجات المشابهة" : "تم إخفاء قسم المنتجات المشابهة" });
+    } catch (err: any) {
+      setShowRelated(!value);
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+    }
+  };
+
   const filteredAdd = products.filter(p =>
     p.id !== selectedProductId &&
     !relatedProducts.some(r => r.id === p.id) &&
@@ -179,7 +198,11 @@ export default function RelatedProducts() {
               <CardTitle className="text-base">
                 المنتجات المشابهة لـ "{selectedProduct?.nameAr}"
               </CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Switch checked={showRelated} onCheckedChange={toggleShowRelated} id="showRelatedToggle" />
+                  <Label htmlFor="showRelatedToggle" className="text-xs cursor-pointer text-muted-foreground">{showRelated ? "ظاهر" : "مخفي"}</Label>
+                </div>
                 <Badge variant="secondary" className="rounded-full text-xs font-number px-3">
                   {relatedItems.length}
                 </Badge>

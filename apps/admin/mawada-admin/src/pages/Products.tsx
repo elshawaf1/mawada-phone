@@ -35,6 +35,7 @@ interface Product {
   sku: string | null;
   isActive: boolean;
   isFeatured: boolean;
+  showRelatedProducts: boolean;
   usePriceRange: boolean;
   minPrice: number | null;
   maxPrice: number | null;
@@ -87,6 +88,7 @@ export default function Products() {
   const [sku, setSku] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [showRelatedProducts, setShowRelatedProducts] = useState(false);
   const [images, setImages] = useState<{ id?: string; url: string; isPrimary: boolean; sortOrder: number; file?: File }[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [specs, setSpecs] = useState<Spec[]>([]);
@@ -120,7 +122,7 @@ export default function Products() {
     setCategoryId(""); setBrandId(""); setBasePrice(0); setSalePrice(null);
     setIsOnSale(false); setUsePriceRange(false); setMinPrice(0); setMaxPrice(0);
     setTotalStock(0); setSku("");
-    setIsActive(true); setIsFeatured(false); setImages([]); setVariants([]); setSpecs([]);
+    setIsActive(true); setIsFeatured(false); setShowRelatedProducts(false); setImages([]); setVariants([]); setSpecs([]);
     setEditingProduct(null);
   };
 
@@ -143,6 +145,7 @@ export default function Products() {
     setSku(product.sku || "");
     setIsActive(product.isActive);
     setIsFeatured(product.isFeatured);
+    setShowRelatedProducts(product.showRelatedProducts || false);
     setImages(product.product_images?.map(img => ({ ...img })) || []);
     const { data: existingVariants } = await supabase
       .from("product_variants")
@@ -215,7 +218,7 @@ export default function Products() {
         minPrice: usePriceRange ? minPrice : null,
         maxPrice: usePriceRange ? maxPrice : null,
         totalStock,
-        sku: sku || null, isActive, isFeatured,
+        sku: sku || null, isActive, isFeatured, showRelatedProducts,
         updatedAt: new Date().toISOString(),
       };
 
@@ -886,6 +889,10 @@ export default function Products() {
                   <div className="flex items-center gap-2">
                     <Switch checked={isFeatured} onCheckedChange={setIsFeatured} id="isFeatured" />
                     <Label htmlFor="isFeatured" className="text-sm cursor-pointer">مميز</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={showRelatedProducts} onCheckedChange={setShowRelatedProducts} id="showRelatedProducts" />
+                    <Label htmlFor="showRelatedProducts" className="text-sm cursor-pointer">منتجات مشابهة</Label>
                   </div>
                 </div>
               {usePriceRange ? (
