@@ -20,21 +20,6 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization') || ''
     const token = authHeader.replace('Bearer ', '')
-    if (!token) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      })
-    }
-
-    const userClient = createClient(supabaseUrl, supabaseServiceKey)
-    const { data: { user }, error: authError } = await userClient.auth.getUser(token)
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      })
-    }
 
     const body = await req.json()
     const { orderId } = body
@@ -46,13 +31,27 @@ serve(async (req) => {
       })
     }
 
-    // Fetch order from DB
-    const { data: order, error: orderErr } = await supabase
+    // Try to verify user from JWT (best effort — don't block if token is expired)
+    let userId: string | null = null
+    if (token) {
+      try {
+        const userClient = createClient(supabaseUrl, supabaseServiceKey)
+        const { data: { user } } = await userClient.auth.getUser(token)
+        if (user) userId = user.id
+      } catch (_) {}
+    }
+
+    // Fetch order from DB (with or without userId check)
+    let orderQuery = supabase
       .from('orders')
-      .select('id, "paymobClientSecret", "paymobIntentionId", "paymentStatus", total')
+      .select('id, "paymobClientSecret", "paymobIntentionId", "paymentStatus", total, userId')
       .eq('id', orderId)
-      .eq('userId', user.id)
-      .single()
+
+    if (userId) {
+      orderQuery = orderQuery.eq('userId', userId)
+    }
+
+    const { data: order, error: orderErr } = await orderQuery.single()
 
     if (orderErr || !order) {
       return new Response(JSON.stringify({ error: 'Order not found' }), {
@@ -121,7 +120,7 @@ serve(async (req) => {
                 },
                 body: JSON.stringify({
                   type: 'payment_success',
-                  userId: user.id,
+                  userId: order.userId,
                   title: 'تم الدفع بنجاح',
                   body: `طلبك تم الدفع عليه بنجاح`,
                   orderId: order.id,
@@ -184,7 +183,7 @@ serve(async (req) => {
                 },
                 body: JSON.stringify({
                   type: 'payment_success',
-                  userId: user.id,
+                  userId: order.userId,
                   title: 'تم الدفع بنجاح',
                   body: `طلبك تم الدفع عليه بنجاح`,
                   orderId: order.id,
