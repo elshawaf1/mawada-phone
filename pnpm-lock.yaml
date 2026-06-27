@@ -251,6 +251,9 @@ importers:
       lucide-react-native:
         specifier: ^1.16.0
         version: 1.16.0(react-native-svg@15.12.1(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.2)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.2)(react@19.1.0))(react@19.1.0)
+      paymob-reactnative:
+        specifier: github:PaymobAccept/paymob-reactnative-sdk
+        version: https://codeload.github.com/PaymobAccept/paymob-reactnative-sdk/tar.gz/6278ba5372c63ec462c60a36f67fe0adc782f14c(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.2)(react@19.1.0))(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -4711,6 +4714,13 @@ packages:
   path-scurry@2.0.2:
     resolution: {integrity: sha512-3O/iVVsJAPsOnpwWIeD+d6z/7PmqApyQePUtCndjatj/9I5LylHvt5qluFaBT3I5h3r1ejfR056c+FCv+NnNXg==}
     engines: {node: 18 || 20 || >=22}
+
+  paymob-reactnative@https://codeload.github.com/PaymobAccept/paymob-reactnative-sdk/tar.gz/6278ba5372c63ec462c60a36f67fe0adc782f14c:
+    resolution: {tarball: https://codeload.github.com/PaymobAccept/paymob-reactnative-sdk/tar.gz/6278ba5372c63ec462c60a36f67fe0adc782f14c}
+    version: 1.0.0
+    peerDependencies:
+      react: '*'
+      react-native: '*'
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -11064,6 +11074,11 @@ snapshots:
     dependencies:
       lru-cache: 11.4.0
       minipass: 7.1.3
+
+  paymob-reactnative@https://codeload.github.com/PaymobAccept/paymob-reactnative-sdk/tar.gz/6278ba5372c63ec462c60a36f67fe0adc782f14c(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.2)(react@19.1.0))(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.2)(react@19.1.0)
 
   picocolors@1.1.1: {}
 

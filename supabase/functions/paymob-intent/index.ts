@@ -117,7 +117,7 @@ serve(async (req) => {
       }
     }
 
-    if (!paymentMethod || !['VISA', 'WALLET', 'COD'].includes(paymentMethod)) {
+    if (!paymentMethod || !['VISA', 'WALLET', 'COD', 'VALU'].includes(paymentMethod)) {
       return fail('Invalid payment method')
     }
 
