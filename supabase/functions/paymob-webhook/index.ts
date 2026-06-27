@@ -96,7 +96,7 @@ serve(async (req) => {
     if (isSuccess) {
       const { data: orders, error: findError } = await supabase
         .from('orders')
-        .select('id, total')
+        .select('id, total, "userId", "orderNumber"')
         .eq('id', String(merchantOrderId))
         .limit(1)
 
@@ -119,12 +119,33 @@ serve(async (req) => {
           .from('orders')
           .update({
             paymentStatus: 'PAID',
+            status: 'CONFIRMED',
             updatedAt: new Date().toISOString(),
           })
           .eq('id', order.id)
 
         if (updateError) {
           console.error('Error updating order to PAID:', updateError)
+        }
+
+        // Send push notification via notification-broadcast
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/notification-broadcast`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              type: 'payment_success',
+              userId: order.userId,
+              title: 'تم الدفع بنجاح',
+              body: `طلبك رقم #${order.orderNumber} تم الدفع عليه بنجاح`,
+              orderId: order.id,
+            }),
+          })
+        } catch (broadcastErr) {
+          console.error('Push notification error:', broadcastErr.message)
         }
       } else {
         console.error('No order found for merchantOrderId:', merchantOrderId)
