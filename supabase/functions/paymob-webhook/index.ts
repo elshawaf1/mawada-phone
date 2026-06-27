@@ -67,6 +67,9 @@ serve(async (req) => {
     const payload = JSON.parse(body)
     const obj = payload.obj
 
+    console.log('[paymob-webhook] Received. obj.id:', obj?.id, 'success:', obj?.success, 'error_occured:', obj?.error_occured)
+    console.log('[paymob-webhook] merchant_order_id:', obj?.order?.merchant_order_id, 'paymob_order_id:', obj?.order?.id)
+
     if (!obj?.id) {
       console.error('Invalid webhook payload')
       return new Response('OK', { status: 200 })
@@ -74,9 +77,11 @@ serve(async (req) => {
 
     const hmacValid = await verifyHmac(hmacFromQuery, payload)
     if (!hmacValid) {
-      console.error('HMAC verification failed')
+      console.error('[paymob-webhook] HMAC verification failed. hmacFromQuery length:', hmacFromQuery.length)
+      console.error('[paymob-webhook] HMAC env present:', !!PAYMOB_HMAC, 'length:', PAYMOB_HMAC?.length)
       return new Response('Unauthorized', { status: 401 })
     }
+    console.log('[paymob-webhook] HMAC verified OK')
 
     const paymobOrderId = obj.order?.id
     if (!paymobOrderId) {
@@ -90,8 +95,8 @@ serve(async (req) => {
       return new Response('OK', { status: 200 })
     }
 
-    const isSuccess = obj.success === true
-    const isFailed = obj.success === false && obj.error_occured === true
+    const isSuccess = obj.success === true || obj.success === 'true'
+    const isFailed = (obj.success === false || obj.success === 'false') && (obj.error_occured === true || obj.error_occured === 'true')
 
     if (isSuccess) {
       const { data: orders, error: findError } = await supabase
@@ -111,10 +116,11 @@ serve(async (req) => {
         const actualAmountCents = Number(obj.amount_cents)
 
         if (actualAmountCents !== expectedAmountCents) {
-          console.error(`Amount mismatch: webhook ${actualAmountCents} vs order ${expectedAmountCents} for order ${order.id}`)
+          console.error(`[paymob-webhook] Amount mismatch: webhook ${actualAmountCents} vs order ${expectedAmountCents} for order ${order.id}`)
           return new Response('Amount mismatch', { status: 400 })
         }
 
+        console.log('[paymob-webhook] Updating order', order.id, 'to PAID')
         const { error: updateError } = await supabase
           .from('orders')
           .update({
@@ -125,7 +131,9 @@ serve(async (req) => {
           .eq('id', order.id)
 
         if (updateError) {
-          console.error('Error updating order to PAID:', updateError)
+          console.error('[paymob-webhook] Error updating order to PAID:', updateError)
+        } else {
+          console.log('[paymob-webhook] Order', order.id, 'updated to PAID successfully')
         }
 
         // Send push notification via notification-broadcast

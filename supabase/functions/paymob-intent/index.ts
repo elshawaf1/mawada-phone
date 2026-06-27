@@ -434,6 +434,17 @@ serve(async (req) => {
       throw new Error('Payment provider error')
     }
 
+    // Save the Paymob intention ID and client_secret so we can verify payment later
+    if (data.id || data.client_secret) {
+      await supabase
+        .from('orders')
+        .update({
+          paymobIntentionId: String(data.id || ''),
+          paymobClientSecret: data.client_secret || null,
+        })
+        .eq('id', order.id)
+    }
+
     return new Response(JSON.stringify({
       clientSecret: data.client_secret,
       orderId: order.id,
