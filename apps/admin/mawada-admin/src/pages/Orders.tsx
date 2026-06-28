@@ -428,37 +428,45 @@ export default function Orders() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">طريقة الدفع:</span>
-                      <Select
-                        value={selectedOrder.paymentMethod || ""}
-                        onValueChange={(val) => updatePaymentMethod(selectedOrder.id, val)}
-                        disabled={updating}
-                      >
-                        <SelectTrigger className="w-full mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {paymentMethodOptions.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {selectedOrder.paymentMethod === 'COD' ? (
+                        <Select
+                          value={selectedOrder.paymentMethod || ""}
+                          onValueChange={(val) => updatePaymentMethod(selectedOrder.id, val)}
+                          disabled={updating}
+                        >
+                          <SelectTrigger className="w-full mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {paymentMethodOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="mt-1 font-medium">{paymentMethodLabels[selectedOrder.paymentMethod] || selectedOrder.paymentMethod}</p>
+                      )}
                     </div>
                     <div>
                       <span className="text-muted-foreground">حالة الدفع:</span>
-                      <Select
-                        value={selectedOrder.paymentStatus || ""}
-                        onValueChange={(val) => updatePaymentStatus(selectedOrder.id, val)}
-                        disabled={updating}
-                      >
-                        <SelectTrigger className="w-full mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(paymentStatusLabels).map(([key, label]) => (
-                            <SelectItem key={key} value={key}>{label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {selectedOrder.paymentMethod === 'COD' ? (
+                        <Select
+                          value={selectedOrder.paymentStatus || ""}
+                          onValueChange={(val) => updatePaymentStatus(selectedOrder.id, val)}
+                          disabled={updating}
+                        >
+                          <SelectTrigger className="w-full mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(paymentStatusLabels).map(([key, label]) => (
+                              <SelectItem key={key} value={key}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="mt-1 font-medium">{paymentStatusLabels[selectedOrder.paymentStatus] || selectedOrder.paymentStatus}</p>
+                      )}
                     </div>
                     <div>
                       <span className="text-muted-foreground">المجموع الفرعي:</span>
