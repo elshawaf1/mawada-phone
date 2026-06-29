@@ -128,6 +128,13 @@ serve(async (req) => {
               })
             } catch (_) {}
 
+            // Fire-and-forget order confirmation email
+            fetch(`${supabaseUrl}/functions/v1/send-order-email`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${supabaseServiceKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: order.id }),
+            }).catch(e => console.error('[paymob-verify] Order email error:', e))
+
             return new Response(JSON.stringify({
               status: 'PAID',
               orderId: order.id,

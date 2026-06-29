@@ -9,3 +9,9 @@ verify_jwt = false
 
 [functions.notification-broadcast]
 verify_jwt = true
+
+[functions.send-auth-email]
+verify_jwt = false
+
+[functions.send-order-email]
+verify_jwt = false

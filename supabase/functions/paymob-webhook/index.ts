@@ -155,6 +155,13 @@ serve(async (req) => {
         } catch (broadcastErr) {
           console.error('Push notification error:', broadcastErr.message)
         }
+
+        // Fire-and-forget order confirmation email
+        fetch(`${supabaseUrl}/functions/v1/send-order-email`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${supabaseServiceKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: order.id }),
+        }).catch(e => console.error('[paymob-webhook] Order email error:', e))
       } else {
         console.error('No order found for merchantOrderId:', merchantOrderId)
       }
