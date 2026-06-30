@@ -38,9 +38,12 @@ interface Order {
 interface OrderItem {
   id: string;
   productId: string;
+  variantId: string | null;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  sku: string | null;
+  variant_name: string | null;
   products: { nameAr: string; name: string; product_images: { url: string }[] } | null;
 }
 
@@ -403,6 +406,8 @@ export default function Orders() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">المنتج</TableHead>
+                      <TableHead className="text-right">المتغير</TableHead>
+                      <TableHead className="text-right">SKU</TableHead>
                       <TableHead className="text-right">الكمية</TableHead>
                       <TableHead className="text-right">السعر</TableHead>
                       <TableHead className="text-right">الإجمالي</TableHead>
@@ -412,6 +417,8 @@ export default function Orders() {
                     {orderItems.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>{item.products?.nameAr || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.variant_name || "-"}</TableCell>
+                        <TableCell className="font-mono text-xs">{item.sku || "-"}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{Number(item.unitPrice).toLocaleString()} ج</TableCell>
                         <TableCell className="font-bold">{Number(item.totalPrice).toLocaleString()} ج</TableCell>

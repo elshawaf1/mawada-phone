@@ -209,14 +209,14 @@ serve(async (req) => {
 
       const { data: products, error: prodErr } = await supabase
         .from('products')
-        .select('id, basePrice, costPrice, nameAr, name, totalStock')
+        .select('id, basePrice, costPrice, nameAr, name, totalStock, sku')
         .in('id', productIds)
 
       let variantMap = new Map()
       if (variantIds.length > 0) {
         const { data: variants } = await supabase
           .from('product_variants')
-          .select('id, price, costPrice, productId, stock')
+          .select('id, price, costPrice, productId, stock, sku, color, storage, ram')
           .in('id', variantIds)
         if (variants) {
           variantMap = new Map(variants.map((v: any) => [v.id, v]))
@@ -313,10 +313,15 @@ serve(async (req) => {
         const orderItems = cartItems.map((item: { productId?: string; variantId?: string; quantity: number }) => {
           let unitPrice = Number(productMap.get(item.productId)?.basePrice || 0)
           let costPrice = Number(productMap.get(item.productId)?.costPrice || 0)
+          let sku = productMap.get(item.productId)?.sku || null
+          let variantName = null
           if (item.variantId && variantMap.has(item.variantId)) {
             const variant = variantMap.get(item.variantId)
             unitPrice = Number(variant.price)
             costPrice = Number(variant.costPrice || 0)
+            sku = variant.sku || sku
+            const parts = [variant.storage, variant.ram, variant.color].filter(Boolean)
+            variantName = parts.length > 0 ? parts.join(' / ') : null
           }
           return {
             id: generateId('oi'),
@@ -326,6 +331,8 @@ serve(async (req) => {
             quantity: item.quantity,
             unitPrice,
             costPrice,
+            sku,
+            variant_name: variantName,
           }
         })
         const { error: oiErr } = await supabase.from('order_items').insert(orderItems)
