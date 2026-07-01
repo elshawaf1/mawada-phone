@@ -21,6 +21,7 @@ const typeBadge: Record<string, { label: string; style: string }> = {
   order: { label: "طلب", style: "bg-blue-100 text-blue-700 border-blue-200" },
   promo: { label: "عرض", style: "bg-emerald-100 text-emerald-700 border-emerald-200" },
   system: { label: "نظام", style: "bg-purple-100 text-purple-700 border-purple-200" },
+  payment: { label: "دفع", style: "bg-cyan-100 text-cyan-700 border-cyan-200" },
 };
 
 const typeOptions = [
@@ -28,6 +29,7 @@ const typeOptions = [
   { value: "order", label: "طلب" },
   { value: "promo", label: "عرض" },
   { value: "system", label: "نظام" },
+  { value: "payment", label: "دفع" },
 ];
 
 interface BroadcastItem {

@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const VALID_TYPES = ['info', 'order', 'promo', 'system']
+const VALID_TYPES = ['info', 'order', 'promo', 'system', 'payment', 'payment_success', 'payment_failed']
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
 const EXPO_PUSH_CHUNK = 100
 
