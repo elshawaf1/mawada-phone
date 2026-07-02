@@ -108,13 +108,7 @@ export default function Categories() {
     setCatName(cat.name || "");
     setCatNameAr(cat.nameAr);
     setCatSlug(cat.slug || "");
-    if (cat.icon && !commonIcons.includes(cat.icon)) {
-      setCatIconUrl(cat.icon);
-    } else if (cat.icon) {
-      setCatIconUrl(cat.icon);
-    } else {
-      setCatIconUrl("");
-    }
+    setCatIconUrl(cat.icon || "");
     setCatIconFile(null);
     setCatHomeImageUrl(cat.homeImageUrl || "");
     setCatHomeImageFile(null);
