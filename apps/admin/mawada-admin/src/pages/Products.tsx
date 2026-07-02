@@ -36,6 +36,7 @@ interface Product {
   isActive: boolean;
   isFeatured: boolean;
   showRelatedProducts: boolean;
+  homeOrder: number | null;
   usePriceRange: boolean;
   minPrice: number | null;
   maxPrice: number | null;
@@ -89,6 +90,7 @@ export default function Products() {
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [showRelatedProducts, setShowRelatedProducts] = useState(false);
+  const [homeOrder, setHomeOrder] = useState<string>("");
   const [images, setImages] = useState<{ id?: string; url: string; isPrimary: boolean; sortOrder: number; file?: File }[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [specs, setSpecs] = useState<Spec[]>([]);
@@ -122,7 +124,7 @@ export default function Products() {
     setCategoryId(""); setBrandId(""); setBasePrice(0); setSalePrice(null);
     setIsOnSale(false); setUsePriceRange(false); setMinPrice(0); setMaxPrice(0);
     setTotalStock(0); setSku("");
-    setIsActive(true); setIsFeatured(false); setShowRelatedProducts(false); setImages([]); setVariants([]); setSpecs([]);
+    setIsActive(true); setIsFeatured(false); setShowRelatedProducts(false); setHomeOrder(""); setImages([]); setVariants([]); setSpecs([]);
     setEditingProduct(null);
   };
 
@@ -146,6 +148,7 @@ export default function Products() {
     setIsActive(product.isActive);
     setIsFeatured(product.isFeatured);
     setShowRelatedProducts(product.showRelatedProducts || false);
+    setHomeOrder(product.homeOrder != null ? String(product.homeOrder) : "");
     setImages(product.product_images?.map(img => ({ ...img })) || []);
     const { data: existingVariants } = await supabase
       .from("product_variants")
@@ -219,6 +222,7 @@ export default function Products() {
         maxPrice: usePriceRange ? maxPrice : null,
         totalStock,
         sku: sku || null, isActive, isFeatured, showRelatedProducts,
+        homeOrder: homeOrder !== "" ? Number(homeOrder) : null,
         updatedAt: new Date().toISOString(),
       };
 
@@ -894,6 +898,11 @@ export default function Products() {
                     <Switch checked={showRelatedProducts} onCheckedChange={setShowRelatedProducts} id="showRelatedProducts" />
                     <Label htmlFor="showRelatedProducts" className="text-sm cursor-pointer">منتجات مشابهة</Label>
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">ترتيب الصفحة الرئيسية</Label>
+                  <Input type="number" inputMode="numeric" placeholder="فارغ = لا يظهر في الصفحة الرئيسية" value={homeOrder} onChange={(e) => setHomeOrder(e.target.value)} className="bg-muted/30 focus:bg-background font-number" />
+                  <p className="text-[11px] text-muted-foreground">أدخل رقمًا لعرض المنتج في الصفحة الرئيسية (1، 2، 3...). اتركه فارغًا لإخفائه.</p>
                 </div>
               {usePriceRange ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
