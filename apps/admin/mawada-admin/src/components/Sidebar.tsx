@@ -13,6 +13,7 @@ import {
   Bell,
   Settings,
   FolderTree,
+  FolderOpen,
   Tag,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/products", label: "المنتجات", icon: Package },
   { href: "/categories", label: "الفئات", icon: FolderTree },
   { href: "/brands", label: "العلامات التجارية", icon: Tag },
+  { href: "/collections", label: "المجموعات", icon: FolderOpen },
   { href: "/bundles", label: "البندل", icon: Boxes },
   { href: "/related-products", label: "المنتجات المشابهة", icon: Link2 },
   { href: "/orders", label: "الطلبات", icon: ShoppingCart },

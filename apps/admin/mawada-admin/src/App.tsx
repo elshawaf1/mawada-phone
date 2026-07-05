@@ -17,6 +17,7 @@ import Bundles from "@/pages/Bundles";
 import RelatedProducts from "@/pages/RelatedProducts";
 import Categories from "@/pages/Categories";
 import Brands from "@/pages/Brands";
+import Collections from "@/pages/Collections";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Layout from "@/components/Layout";
@@ -99,6 +100,7 @@ function AppRoutes() {
       <Route path="/related-products" component={() => <ProtectedRoute><RelatedProducts /></ProtectedRoute>} />
       <Route path="/categories" component={() => <ProtectedRoute><Categories /></ProtectedRoute>} />
       <Route path="/brands" component={() => <ProtectedRoute><Brands /></ProtectedRoute>} />
+      <Route path="/collections" component={() => <ProtectedRoute><Collections /></ProtectedRoute>} />
       <Route path="/orders" component={() => <ProtectedRoute><Orders /></ProtectedRoute>} />
       <Route path="/marketing" component={() => <ProtectedRoute><Marketing /></ProtectedRoute>} />
       <Route path="/top-products" component={() => <ProtectedRoute><TopProducts /></ProtectedRoute>} />

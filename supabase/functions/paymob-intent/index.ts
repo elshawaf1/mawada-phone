@@ -372,6 +372,7 @@ serve(async (req) => {
           status: 200,
         })
       }
+
     }
 
     const methods = paymentMethodIds?.length > 0 ? paymentMethodIds : []

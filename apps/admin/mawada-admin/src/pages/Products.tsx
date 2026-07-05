@@ -37,6 +37,7 @@ interface Product {
   isFeatured: boolean;
   showRelatedProducts: boolean;
   homeOrder: number | null;
+  condition: string;
   usePriceRange: boolean;
   minPrice: number | null;
   maxPrice: number | null;
@@ -66,6 +67,9 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [collectionFilter, setCollectionFilter] = useState("ALL");
+  const [collections, setCollections] = useState<{id: string; name: string}[]>([]);
+  const [collectionItems, setCollectionItems] = useState<{collection_id: string; product_id: string}[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -91,6 +95,10 @@ export default function Products() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [showRelatedProducts, setShowRelatedProducts] = useState(false);
   const [homeOrder, setHomeOrder] = useState<string>("");
+  const [condition, setCondition] = useState<string>("new");
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
+  const [allCollections, setAllCollections] = useState<{id: string; name: string}[]>([]);
+  const [collectionSearch, setCollectionSearch] = useState("");
   const [images, setImages] = useState<{ id?: string; url: string; isPrimary: boolean; sortOrder: number; file?: File }[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [specs, setSpecs] = useState<Spec[]>([]);
@@ -102,16 +110,20 @@ export default function Products() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [productsRes, categoriesRes, brandsRes] = await Promise.all([
+      const [productsRes, categoriesRes, brandsRes, colRes, itemsRes] = await Promise.all([
         supabaseAdmin.from("products")
           .select("*, categories(name, nameAr), brands(name, nameAr), product_images(id, url, isPrimary, sortOrder)")
           .order("createdAt", { ascending: false }),
         supabaseAdmin.from("categories").select("id, name, nameAr").order("sortOrder"),
         supabaseAdmin.from("brands").select("id, name, nameAr").order("sortOrder"),
+        supabaseAdmin.from("product_collections").select("id, name"),
+        supabaseAdmin.from("product_collection_items").select("collection_id, product_id"),
       ]);
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
       setBrands(brandsRes.data || []);
+      setCollections(colRes.data || []);
+      setCollectionItems(itemsRes.data || []);
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally {
@@ -124,7 +136,7 @@ export default function Products() {
     setCategoryId(""); setBrandId(""); setBasePrice(0); setSalePrice(null);
     setIsOnSale(false); setUsePriceRange(false); setMinPrice(0); setMaxPrice(0);
     setTotalStock(0); setSku("");
-    setIsActive(true); setIsFeatured(false); setShowRelatedProducts(false); setHomeOrder(""); setImages([]); setVariants([]); setSpecs([]);
+    setIsActive(true); setIsFeatured(false); setShowRelatedProducts(false); setHomeOrder(""); setCondition("new"); setCollectionIds([]); setImages([]); setVariants([]); setSpecs([]);
     setEditingProduct(null);
   };
 
@@ -149,6 +161,7 @@ export default function Products() {
     setIsFeatured(product.isFeatured);
     setShowRelatedProducts(product.showRelatedProducts || false);
     setHomeOrder(product.homeOrder != null ? String(product.homeOrder) : "");
+    setCondition(product.condition || "new");
     setImages(product.product_images?.map(img => ({ ...img })) || []);
     const { data: existingVariants } = await supabase
       .from("product_variants")
@@ -167,6 +180,8 @@ export default function Products() {
     setSpecs((existingSpecs || []).map(s => ({
       id: s.id, groupName: s.groupName, key: s.key, value: s.value, sortOrder: s.sortOrder,
     })));
+    const { data: prodCols } = await supabaseAdmin.from("product_collection_items").select("collection_id").eq("product_id", product.id);
+    setCollectionIds((prodCols || []).map(c => c.collection_id));
     setShowForm(true);
   };
 
@@ -221,7 +236,7 @@ export default function Products() {
         minPrice: usePriceRange ? minPrice : null,
         maxPrice: usePriceRange ? maxPrice : null,
         totalStock,
-        sku: sku || null, isActive, isFeatured, showRelatedProducts,
+        sku: sku || null, isActive, isFeatured, showRelatedProducts, condition,
         homeOrder: homeOrder !== "" ? Number(homeOrder) : null,
         updatedAt: new Date().toISOString(),
       };
@@ -277,6 +292,18 @@ export default function Products() {
           productId, groupName: s.groupName, key: s.key, value: s.value, sortOrder: s.sortOrder,
         })));
         if (specError) throw specError;
+      }
+
+      // Sync collection memberships
+      await supabaseAdmin.from("product_collection_items").delete().eq("product_id", productId);
+      if (collectionIds.length > 0) {
+        const colItems = collectionIds.map((cid, idx) => ({
+          collection_id: cid,
+          product_id: productId,
+          sort_order: idx,
+        }));
+        const { error: colError } = await supabaseAdmin.from("product_collection_items").insert(colItems);
+        if (colError) throw colError;
       }
 
       toast({ title: "تم", description: editingProduct ? "تم تحديث المنتج" : "تم إضافة المنتج" });
@@ -398,14 +425,16 @@ export default function Products() {
   };
 
   const toggleActive = async (product: Product) => {
-    const { error } = await supabaseAdmin.from("products").update({ isActive: !product.isActive, updatedAt: new Date().toISOString() }).eq("id", product.id);
-    if (!error) fetchData();
+    const newActive = !product.isActive;
+    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isActive: newActive } : p));
+    await supabaseAdmin.from("products").update({ isActive: newActive, updatedAt: new Date().toISOString() }).eq("id", product.id);
   };
 
   const filtered = products.filter(p => {
     const matchSearch = p.nameAr.toLowerCase().includes(search.toLowerCase()) || p.name.toLowerCase().includes(search.toLowerCase());
     const matchCategory = categoryFilter === "ALL" || p.categoryId === categoryFilter;
-    return matchSearch && matchCategory;
+    const matchCollection = collectionFilter === "ALL" || collectionItems.some(ci => ci.collection_id === collectionFilter && ci.product_id === p.id);
+    return matchSearch && matchCategory && matchCollection;
   });
 
   const getVariantId = (v: Variant) => v.id || v._tempId || `gen_${Math.random().toString(36).slice(2, 10)}`;
@@ -563,6 +592,15 @@ export default function Products() {
             {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.nameAr}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={collectionFilter} onValueChange={setCollectionFilter}>
+          <SelectTrigger className="w-44 rounded-xl bg-muted/50 border-border/60">
+            <SelectValue placeholder="جميع المجموعات" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">جميع المجموعات</SelectItem>
+            {collections.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Product Table */}
@@ -584,6 +622,7 @@ export default function Products() {
                     <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المنتج</TableHead>
                     <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">التصنيف</TableHead>
                     <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">السعر</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الحالة</TableHead>
                     <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">المخزون</TableHead>
                     <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9">الحالة</TableHead>
                     <TableHead className="text-right text-xs font-semibold text-muted-foreground/60 h-9 w-12"></TableHead>
@@ -592,7 +631,7 @@ export default function Products() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
                         <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
                         <p className="text-sm">لا توجد منتجات مطابقة</p>
                       </TableCell>
@@ -602,7 +641,7 @@ export default function Products() {
                     return (
                       <TableRow key={product.id} className={cn("hover:bg-muted/20 transition-colors border-b border-border/20", !product.isActive && "opacity-55")}>
                         <TableCell className="py-3">
-                          <div className="flex items-center gap-3 max-w-[280px]">
+                          <div className="flex items-center gap-3 max-w-[360px]">
                             <div className="w-10 h-10 rounded-lg overflow-hidden ring-1 ring-black/5 shrink-0 bg-muted">
                               {primaryImage?.url ? (
                                 <img src={primaryImage.url} alt="" className="w-full h-full object-cover" />
@@ -614,12 +653,12 @@ export default function Products() {
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <p className="text-sm font-medium truncate">{product.nameAr}</p>
+                                <p className="text-sm font-medium">{product.nameAr}</p>
                                 {product.isFeatured && (
                                   <Badge variant="secondary" className="text-[9px] px-1.5 py-0 rounded-full h-4 font-number bg-amber-50 text-amber-700 border-amber-200">مميز</Badge>
                                 )}
                               </div>
-                              {product.name && <p className="text-xs text-muted-foreground truncate">{product.name}</p>}
+                              {product.name && <p className="text-xs text-muted-foreground">{product.name}</p>}
                               {product.sku && <p className="text-[10px] text-muted-foreground/50 font-mono font-number">{product.sku}</p>}
                             </div>
                           </div>
@@ -649,6 +688,13 @@ export default function Products() {
                             )}
                             <span className="text-xs text-muted-foreground/60">ج</span>
                           </div>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge variant="outline" className={cn("text-[11px] rounded-full px-2.5 py-0.5",
+                            product.condition === 'used' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"
+                          )}>
+                            {product.condition === 'used' ? 'مستعمل' : 'جديد'}
+                          </Badge>
                         </TableCell>
                         <TableCell className="py-3">
                           <div className="flex items-center gap-2">
@@ -904,6 +950,52 @@ export default function Products() {
                   <Input type="number" inputMode="numeric" placeholder="فارغ = لا يظهر في الصفحة الرئيسية" value={homeOrder} onChange={(e) => setHomeOrder(e.target.value)} className="bg-muted/30 focus:bg-background font-number" />
                   <p className="text-[11px] text-muted-foreground">أدخل رقمًا لعرض المنتج في الصفحة الرئيسية (1، 2، 3...). اتركه فارغًا لإخفائه.</p>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">الحالة</Label>
+                  <Select value={condition} onValueChange={setCondition}>
+                    <SelectTrigger className="bg-muted/30 focus:bg-background w-48"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">جديد</SelectItem>
+                      <SelectItem value="used">مستعمل</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">المجموعات</Label>
+                  {allCollections.length > 3 && (
+                    <div className="relative">
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="بحث في المجموعات..."
+                        value={collectionSearch}
+                        onChange={(e) => setCollectionSearch(e.target.value)}
+                        className="pr-8 text-sm h-8 rounded-lg bg-muted/30"
+                      />
+                    </div>
+                  )}
+                  <div className="border rounded-xl bg-muted/30 p-3 max-h-60 overflow-y-auto space-y-1.5">
+                    {allCollections.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">لا توجد مجموعات</p>
+                    ) : (
+                      allCollections
+                        .filter(c => c.name.toLowerCase().includes(collectionSearch.toLowerCase()))
+                        .map(c => (
+                          <label key={c.id} className="flex items-center gap-2.5 cursor-pointer py-1 px-2 rounded-lg hover:bg-muted/50 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={collectionIds.includes(c.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) setCollectionIds(prev => [...prev, c.id]);
+                                else setCollectionIds(prev => prev.filter(id => id !== c.id));
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                            <span className="text-sm">{c.name}</span>
+                          </label>
+                        ))
+                    )}
+                  </div>
+                </div>
               {usePriceRange ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
@@ -949,30 +1041,23 @@ export default function Products() {
 
             <TabsContent value="images" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">رفع صور (حد أقصى 3)</Label>
-                {images.length >= 3 ? (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4" /> لقد وصلت للحد الأقصى من الصور (3). قم بإزالة صورة أولاً.
-                  </p>
-                ) : (
-                  <div className="border-2 border-dashed border-border/60 rounded-xl p-6 text-center hover:border-primary/40 transition-colors cursor-pointer" onClick={() => {
-                    const input = document.createElement("input");
-                    input.type = "file";
-                    input.accept = "image/*";
-                    input.multiple = true;
-                    input.onchange = (e: any) => {
-                      const files = Array.from(e.target.files || []);
-                      const slotsLeft = 3 - images.length;
-                      const newImages = files.slice(0, slotsLeft).map(f => ({ url: "", isPrimary: false, sortOrder: images.length, file: f as File }));
-                      setImages([...images, ...newImages]);
-                    };
-                    input.click();
-                  }}>
-                    <ImagePlus className="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
-                    <p className="text-sm text-muted-foreground">انقر لرفع الصور</p>
-                    <p className="text-xs text-muted-foreground/50 mt-1">PNG, JPG - حد أقصى 3 صور</p>
-                  </div>
-                )}
+                <Label className="text-sm font-medium">رفع الصور</Label>
+                <div className="border-2 border-dashed border-border/60 rounded-xl p-6 text-center hover:border-primary/40 transition-colors cursor-pointer" onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.multiple = true;
+                  input.onchange = (e: any) => {
+                    const files = Array.from(e.target.files || []);
+                    const newImages = files.map(f => ({ url: "", isPrimary: false, sortOrder: images.length, file: f as File }));
+                    setImages([...images, ...newImages]);
+                  };
+                  input.click();
+                }}>
+                  <ImagePlus className="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">انقر لرفع الصور</p>
+                  <p className="text-xs text-muted-foreground/50 mt-1">PNG, JPG — بدون حد أقصى</p>
+                </div>
               </div>
               {images.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

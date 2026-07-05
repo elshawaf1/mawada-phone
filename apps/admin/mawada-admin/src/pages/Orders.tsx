@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Eye, Loader2, Package, MapPin, CreditCard, Phone, Mail, MoreHorizontal, Clock } from "lucide-react";
+import { Search, Eye, Loader2, Package, MapPin, CreditCard, Phone, Mail, MoreHorizontal, Clock, CheckCircle, XCircle, Smartphone, Image as ImageIcon } from "lucide-react";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,6 +21,8 @@ interface Order {
   status: string;
   paymentMethod: string;
   paymentStatus: string;
+  paymentProofUrl: string | null;
+  paymentProofStatus: string | null;
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -71,6 +73,7 @@ const paymentMethodLabels: Record<string, string> = {
   VISA: "فيزا",
   WALLET: "محفظة",
   COD: "عند الاستلام",
+  INSTAPAY: "إنستاباي",
 };
 
 const paymentStatusLabels: Record<string, string> = {
@@ -79,6 +82,20 @@ const paymentStatusLabels: Record<string, string> = {
   PAID: "مدفوع",
   FAILED: "فشل",
   REFUNDED: "مسترد",
+};
+
+const proofStatusLabels: Record<string, string> = {
+  NONE: "",
+  PENDING: "بانتظار المراجعة",
+  APPROVED: "تم الاعتماد",
+  REJECTED: "تم الرفض",
+};
+
+const proofStatusColors: Record<string, string> = {
+  NONE: "",
+  PENDING: "bg-amber-100 text-amber-800",
+  APPROVED: "bg-green-100 text-green-800",
+  REJECTED: "bg-red-100 text-red-800",
 };
 
 const paymentStatusColors: Record<string, string> = {
@@ -94,6 +111,7 @@ const paymentMethodOptions = [
   { value: "VISA", label: "فيزا" },
   { value: "WALLET", label: "محفظة" },
   { value: "BRANCH", label: "الفرع" },
+  { value: "INSTAPAY", label: "إنستاباي" },
 ];
 
 export default function Orders() {
@@ -103,10 +121,12 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("ALL");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("ALL");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [updating, setUpdating] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [proofModal, setProofModal] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -216,12 +236,97 @@ export default function Orders() {
     setShowDetail(true);
   };
 
+  const approveProof = async (orderId: string) => {
+    setUpdating(true);
+    try {
+      const order = orders.find(o => o.id === orderId);
+      const { error } = await supabaseAdmin.from("orders").update({
+        paymentProofStatus: "APPROVED",
+        paymentStatus: "PAID",
+        status: "CONFIRMED",
+        updatedAt: new Date().toISOString(),
+      }).eq("id", orderId);
+      if (error) throw error;
+
+      // Send notification
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || "";
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notification-broadcast`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: order?.userId,
+            title: "تم الدفع بنجاح",
+            titleAr: "تم الدفع بنجاح",
+            body: `تم تأكيد طلبك رقم ${order?.orderNumber}`,
+            bodyAr: `تم تأكيد طلبك رقم ${order?.orderNumber}`,
+            type: "payment_success",
+            orderId,
+          }),
+        });
+      } catch (e) { console.error("Notification error:", e); }
+
+      toast({ title: "تم", description: "تم اعتماد الدفع" });
+      fetchOrders();
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, paymentProofStatus: "APPROVED", paymentStatus: "PAID", status: "CONFIRMED" });
+      }
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const rejectProof = async (orderId: string) => {
+    setUpdating(true);
+    try {
+      const order = orders.find(o => o.id === orderId);
+      const { error } = await supabaseAdmin.from("orders").update({
+        paymentProofStatus: "REJECTED",
+        updatedAt: new Date().toISOString(),
+      }).eq("id", orderId);
+      if (error) throw error;
+
+      // Send notification
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || "";
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notification-broadcast`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: order?.userId,
+            title: "تم رفض إثبات الدفع",
+            titleAr: "تم رفض إثبات الدفع",
+            body: "يرجى التواصل مع الدعم أو إعادة إرسال إثبات الدفع",
+            bodyAr: "يرجى التواصل مع الدعم أو إعادة إرسال إثبات الدفع",
+            type: "payment_failed",
+            orderId,
+          }),
+        });
+      } catch (e) { console.error("Notification error:", e); }
+
+      toast({ title: "تم", description: "تم رفض الدفع" });
+      fetchOrders();
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, paymentProofStatus: "REJECTED" });
+      }
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const filtered = orders.filter(o => {
     const matchSearch = o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
       o.profiles?.name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "ALL" || o.status === statusFilter;
     const matchPaymentStatus = paymentStatusFilter === "ALL" || o.paymentStatus === paymentStatusFilter;
-    return matchSearch && matchStatus && matchPaymentStatus;
+    const matchPaymentMethod = paymentMethodFilter === "ALL" || o.paymentMethod === paymentMethodFilter;
+    return matchSearch && matchStatus && matchPaymentStatus && matchPaymentMethod;
   });
 
   if (loading) {
@@ -236,7 +341,10 @@ export default function Orders() {
     <div className="space-y-5" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold">الطلبات</h1>
-        <p className="text-muted-foreground mt-1">{orders.length} طلب</p>
+        <p className="text-muted-foreground mt-1">{orders.length} طلب{(() => {
+          const pendingProofs = orders.filter(o => o.paymentMethod === 'INSTAPAY' && o.paymentProofStatus === 'PENDING').length;
+          return pendingProofs > 0 ? ` · ${pendingProofs} طلب بانتظار مراجعة إنستاباي` : '';
+        })()}</p>
       </div>
 
       <div className="flex gap-3 flex-wrap">
@@ -262,6 +370,17 @@ export default function Orders() {
           <SelectContent>
             <SelectItem value="ALL">جميع حالات الدفع</SelectItem>
             {Object.entries(paymentStatusLabels).map(([key, label]) => (
+              <SelectItem key={key} value={key}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="طريقة الدفع" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">جميع طرق الدفع</SelectItem>
+            {Object.entries(paymentMethodLabels).map(([key, label]) => (
               <SelectItem key={key} value={key}>{label}</SelectItem>
             ))}
           </SelectContent>
@@ -510,6 +629,47 @@ export default function Orders() {
                 </CardContent>
               </Card>
 
+              {/* InstaPay Payment Proof */}
+              {selectedOrder.paymentMethod === 'INSTAPAY' && selectedOrder.paymentProofUrl && (
+                <Card className="shadow-sm border-emerald-200">
+                  <CardContent className="p-4 space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2 text-sm">
+                      <ImageIcon className="w-4 h-4 text-emerald-600" /> إثبات الدفع
+                      {selectedOrder.paymentProofStatus && selectedOrder.paymentProofStatus !== 'NONE' && (
+                        <Badge className={proofStatusColors[selectedOrder.paymentProofStatus]}>
+                          {proofStatusLabels[selectedOrder.paymentProofStatus]}
+                        </Badge>
+                      )}
+                    </h3>
+                    <img
+                      src={selectedOrder.paymentProofUrl}
+                      alt="إثبات الدفع"
+                      className="rounded-lg max-h-64 object-contain cursor-pointer border"
+                      onClick={() => setProofModal(true)}
+                    />
+                    {selectedOrder.paymentProofStatus === 'PENDING' && (
+                      <div className="flex gap-3 mt-2">
+                        <Button
+                          onClick={() => approveProof(selectedOrder.id)}
+                          disabled={updating}
+                          className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                        >
+                          <CheckCircle className="w-4 h-4" /> اعتماد
+                        </Button>
+                        <Button
+                          onClick={() => rejectProof(selectedOrder.id)}
+                          disabled={updating}
+                          variant="destructive"
+                          className="gap-2"
+                        >
+                          <XCircle className="w-4 h-4" /> رفض
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Update Status */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <Label>تحديث الحالة:</Label>
@@ -537,6 +697,18 @@ export default function Orders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Full-screen proof image modal */}
+      {proofModal && selectedOrder?.paymentProofUrl && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setProofModal(false)}>
+          <img
+            src={selectedOrder.paymentProofUrl}
+            alt="إثبات الدفع"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          />
+          <button className="absolute top-4 left-4 bg-white/20 hover:bg-white/30 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl" onClick={() => setProofModal(false)}>✕</button>
+        </div>
+      )}
     </div>
   );
 }
