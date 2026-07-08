@@ -1,6 +1,8 @@
 -- 67-skip-notifications-unpaid.sql
--- Skip "order placed" notification on INSERT for unpaid InstaPay orders.
--- InstaPay orders need proof upload + admin approval before being valid.
+-- Skip "order placed" notification on INSERT for unpaid orders.
+-- If paymentStatus is PENDING (Card/Wallet SDK abandoned, InstaPay no proof),
+-- don't send notification — the order is not confirmed yet.
+-- COD orders (paymentStatus='UNPAID') still get notifications.
 
 CREATE OR REPLACE FUNCTION public.notify_order_status_change()
 RETURNS TRIGGER AS $$
@@ -12,8 +14,9 @@ DECLARE
   v_short_order text;
 BEGIN
   IF (TG_OP = 'INSERT') THEN
-    -- Skip notification for InstaPay orders (payment not confirmed yet)
-    IF NEW."paymentMethod" = 'INSTAPAY' THEN
+    -- Skip notification for ANY unpaid order (Card/Wallet PENDING, InstaPay PENDING)
+    -- COD orders have paymentStatus='UNPAID' so they still get notified
+    IF NEW."paymentStatus" = 'PENDING' THEN
       RETURN NEW;
     END IF;
     v_title := 'Order placed';
