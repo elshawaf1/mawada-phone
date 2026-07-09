@@ -257,7 +257,7 @@ serve(async (req) => {
     console.error('[paymob-verify] error:', error.message)
     return new Response(JSON.stringify({ error: 'Internal error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+      status: 500,
     })
   }
 })

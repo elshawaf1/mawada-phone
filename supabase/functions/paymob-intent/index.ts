@@ -338,6 +338,7 @@ serve(async (req) => {
         const { error: oiErr } = await supabase.from('order_items').insert(orderItems)
         if (oiErr) {
           console.error('order_items insert error:', oiErr.message)
+          return fail(`Failed to create order items: ${oiErr.message}`, 500)
         }
 
         orderItemsForPaymob = cartItems.map((item: { productId: string; variantId?: string; quantity: number }) => {
@@ -472,7 +473,7 @@ serve(async (req) => {
     console.error('paymob-intent error:', error.message)
     return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+      status: 500,
     })
   }
 })

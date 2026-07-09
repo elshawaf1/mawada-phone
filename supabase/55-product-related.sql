@@ -25,4 +25,6 @@ CREATE POLICY "product_related_public_select" ON public.product_related
   FOR SELECT USING (true);
 
 CREATE POLICY "product_related_admin_all" ON public.product_related
-  FOR ALL USING (true);
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'ADMIN')
+  );

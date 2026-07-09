@@ -29,7 +29,7 @@ END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Admins can manage bundle items" ON bundle_items FOR ALL USING (
-    EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+    EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'ADMIN')
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
